@@ -53,7 +53,7 @@ class OpfReader {
 
     String dc(String name) {
       final el = pkg
-          .findAllElements(name, namespace: '*')
+          .findAllElements(name, namespaceUri: '*')
           .where((e) => e.qualifiedName.endsWith(name))
           .firstOrNull;
       return el?.innerText.trim() ?? '';
@@ -67,7 +67,7 @@ class OpfReader {
     final idToHref = <String, String>{};
     final mediaTypes = <String, String>{};
     String? coverIdHref;
-    for (final item in pkg.findAllElements('item', namespace: '*')) {
+    for (final item in pkg.findAllElements('item', namespaceUri: '*')) {
       final id = item.getAttribute('id');
       final href = item.getAttribute('href');
       final media = item.getAttribute('media-type') ?? '';
@@ -83,7 +83,7 @@ class OpfReader {
 
     // EPUB2 cover marker: <meta name="cover" content="cover-id"/>.
     if (coverIdHref == null) {
-      for (final meta in pkg.findAllElements('meta', namespace: '*')) {
+      for (final meta in pkg.findAllElements('meta', namespaceUri: '*')) {
         if (meta.getAttribute('name') == 'cover') {
           final id = meta.getAttribute('content');
           coverIdHref = id == null ? null : idToHref[id];
@@ -94,7 +94,7 @@ class OpfReader {
 
     // Spine: ordered itemref -> manifest id -> archive path.
     final spine = <String>[];
-    for (final ref in pkg.findAllElements('itemref', namespace: '*')) {
+    for (final ref in pkg.findAllElements('itemref', namespaceUri: '*')) {
       final idref = ref.getAttribute('idref');
       final path = idref == null ? null : idToHref[idref];
       if (path != null) spine.add(path);
@@ -115,7 +115,7 @@ class OpfReader {
   String _findOpfPath(Archive archive) {
     final container = _readString(archive, 'META-INF/container.xml');
     final doc = XmlDocument.parse(container);
-    final rootfile = doc.findAllElements('rootfile', namespace: '*').firstOrNull;
+    final rootfile = doc.findAllElements('rootfile', namespaceUri: '*').firstOrNull;
     final fullPath = rootfile?.getAttribute('full-path');
     if (fullPath == null) {
       throw const FormatException('EPUB container.xml has no rootfile');

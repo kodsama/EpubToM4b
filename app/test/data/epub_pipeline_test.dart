@@ -66,7 +66,7 @@ with plenty of text so it would otherwise pass the length filter.</nav></body></
   archive.addFile(ArchiveFile(
       'OEBPS/images/cover.jpg', 4, Uint8List.fromList([255, 216, 255, 217])));
 
-  return Uint8List.fromList(ZipEncoder().encode(archive)!);
+  return Uint8List.fromList(ZipEncoder().encode(archive));
 }
 
 void main() {
@@ -141,7 +141,7 @@ void main() {
 <rootfiles><rootfile full-path="content.opf"/></rootfiles></container>''')))
         ..addFile(ArchiveFile('content.opf', 1, utf8.encode('''
 <package xmlns="http://www.idpf.org/2007/opf"><manifest/><spine/></package>''')));
-      final bytes = Uint8List.fromList(ZipEncoder().encode(empty)!);
+      final bytes = Uint8List.fromList(ZipEncoder().encode(empty));
       expect(() => EpubParser().parse(bytes), throwsFormatException);
     });
   });
