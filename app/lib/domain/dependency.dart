@@ -39,14 +39,28 @@ extension DependencyKindInfo on DependencyKind {
         DependencyKind.kokoroModel => 'Kokoro model',
       };
 
-  /// True when this is installed by the OS package manager (vs. downloaded).
+  /// True when this is installed by the OS package manager. `piper` is a
+  /// GitHub-release binary (not a package-manager formula on any platform), so
+  /// it is fetched by the in-app downloader alongside voices/models.
   bool get isSystemPackage => switch (this) {
         DependencyKind.ffmpeg ||
         DependencyKind.ffprobe ||
-        DependencyKind.piper ||
         DependencyKind.espeakNg =>
           true,
-        DependencyKind.piperVoice || DependencyKind.kokoroModel => false,
+        DependencyKind.piper ||
+        DependencyKind.piperVoice ||
+        DependencyKind.kokoroModel =>
+          false,
+      };
+
+  /// The executable name probed on `PATH` when this dependency is a binary,
+  /// or `null` for pure downloads (voices/models).
+  String? get binaryName => switch (this) {
+        DependencyKind.ffmpeg => 'ffmpeg',
+        DependencyKind.ffprobe => 'ffprobe',
+        DependencyKind.piper => 'piper',
+        DependencyKind.espeakNg => 'espeak-ng',
+        DependencyKind.piperVoice || DependencyKind.kokoroModel => null,
       };
 }
 
