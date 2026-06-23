@@ -1,0 +1,19 @@
+# Python CLI runtime cache / outputs (keep the running conversion untouched)
+*.work/
+*.m4b
+convert.log
+__pycache__/
+
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+**/*.g.dart.lock
+
+# Large local TTS models / voices fetched at runtime
+app/.models/
+*.onnx
+
+# OS
+.DS_Store
