@@ -6,6 +6,18 @@ library;
 
 import 'dart:typed_data';
 
+/// Converts normalized float samples in `[-1, 1]` to little-endian signed
+/// 16-bit PCM bytes. Used by model backends (e.g. Kokoro) that emit float audio.
+Uint8List floatToPcm16(List<double> samples) {
+  final out = Uint8List(samples.length * 2);
+  final view = out.buffer.asByteData();
+  for (var i = 0; i < samples.length; i++) {
+    final clamped = samples[i].clamp(-1.0, 1.0);
+    view.setInt16(i * 2, (clamped * 32767).round(), Endian.little);
+  }
+  return out;
+}
+
 /// Builds the bytes of a mono 16-bit PCM WAV file wrapping [pcm] at
 /// [sampleRate] Hz.
 Uint8List buildWavPcm16Mono(Uint8List pcm, int sampleRate) {
