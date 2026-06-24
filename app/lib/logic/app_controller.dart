@@ -62,7 +62,6 @@ class AppController extends ChangeNotifier {
   List<DependencyStatus> _deps = const [];
   bool _depsChecked = false;
   bool _installing = false;
-  bool _installingModel = false;
   String? _parseError;
 
   /// The parsed book, or null before one is loaded.
@@ -81,7 +80,7 @@ class AppController extends ChangeNotifier {
   bool get installing => _installing;
 
   /// Whether a local model download is in progress.
-  bool get installingModel => _installingModel;
+  bool get installingModel => _downloadingModelId != null;
 
   /// The last parse error message, if loading failed.
   String? get parseError => _parseError;
@@ -239,20 +238,38 @@ class AppController extends ChangeNotifier {
         !backendAvailable(TtsBackendKind.local);
   }
 
-  /// Downloads the selected local model (+ vocoder), streaming progress.
+  /// Whether [model]'s files are present on disk.
+  bool isModelInstalled(SherpaModel model) => sherpaInstaller.isInstalled(model);
+
+  String? _downloadingModelId;
+
+  /// The id of the model currently downloading, or null.
+  String? get downloadingModelId => _downloadingModelId;
+
+  /// Downloads the selected local model (used by the options-panel button).
   Future<void> setupModel() async {
     final model = _localModelFor(TtsBackendKind.local);
-    if (model == null || _installingModel) return;
-    _installingModel = true;
+    if (model != null) await downloadModel(model);
+  }
+
+  /// Downloads a specific [model] (+ vocoder), streaming progress, then selects
+  /// it as the active local voice so it's ready to use.
+  Future<void> downloadModel(SherpaModel model) async {
+    if (_downloadingModelId != null) return;
+    _downloadingModelId = model.id;
     notifyListeners();
     try {
       await for (final line in sherpaInstaller.ensureInstalled(model)) {
         log.info(line);
       }
+      final o = _options;
+      if (o != null && o.backend == TtsBackendKind.local) {
+        _options = o.copyWith(voiceId: model.id);
+      }
     } on Object catch (e) {
       log.error('Model download failed: $e');
     } finally {
-      _installingModel = false;
+      _downloadingModelId = null;
       await checkDeps();
       notifyListeners();
     }

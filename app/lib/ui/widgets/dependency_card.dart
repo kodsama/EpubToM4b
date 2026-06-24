@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../data/tts/sherpa_catalog.dart';
 import '../../domain/dependency.dart';
 import '../../logic/app_controller.dart';
 import '../theme.dart';
@@ -16,6 +17,7 @@ class DependencyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     final deps = controller.deps;
     final missingRequired = controller.missingRequired;
     final coreReady = controller.coreToolsReady;
@@ -54,15 +56,24 @@ class DependencyCard extends StatelessWidget {
           else
             ...deps.map((d) => _DepRow(d)),
           if (controller.depsChecked) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Text('Local voices', style: text.titleMedium),
+                const SizedBox(width: 8),
+                const StatusPill('only one needed', color: AppTokens.muted),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...kSherpaModels.map((m) => _ModelRow(controller: controller, model: m)),
+            const SizedBox(height: 10),
             Text(
               !coreReady
                   ? 'Install the required tools (red) to continue.'
                   : engineReady
                       ? "Ready — choose a book below."
-                      : 'Core tools are ready, but no TTS engine is set up yet. '
-                          'Choose a book, then in step 3 download Piper or Kokoro, '
-                          'or pick a cloud engine and add its API key.',
+                      : 'Core tools are ready. Install any one voice above (or pick a '
+                          'cloud engine and add its API key in step 3) to convert.',
               style: TextStyle(
                   color: !coreReady
                       ? AppTokens.rust
@@ -99,6 +110,58 @@ class DependencyCard extends StatelessWidget {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A local model row: status, label, language + size, and a Download button.
+class _ModelRow extends StatelessWidget {
+  final AppController controller;
+  final SherpaModel model;
+  const _ModelRow({required this.controller, required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    final installed = controller.isModelInstalled(model);
+    final downloading = controller.downloadingModelId == model.id;
+    final busy = controller.downloadingModelId != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(
+            installed
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            size: 18,
+            color: installed ? AppTokens.sage : AppTokens.muted,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${model.label}  ·  ${model.languages.map((l) => l.toUpperCase()).join('/')}  ·  ${model.sizeMb} MB',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (installed)
+            const StatusPill('installed', icon: Icons.check_rounded)
+          else
+            OutlinedButton.icon(
+              onPressed: busy ? null : () => controller.downloadModel(model),
+              icon: downloading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppTokens.amber))
+                  : const Icon(Icons.download_rounded, size: 15),
+              label: Text(downloading ? 'Downloading…' : 'Install'),
+            ),
         ],
       ),
     );
