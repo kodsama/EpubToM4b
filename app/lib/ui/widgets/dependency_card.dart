@@ -21,10 +21,9 @@ class DependencyCard extends StatelessWidget {
     final allOk = controller.depsChecked && missing.isEmpty;
 
     return SectionCard(
-      step: 2,
+      step: 1,
       title: 'Check your toolkit',
-      subtitle: 'Tools the selected engine needs',
-      dimmed: controller.book == null,
+      subtitle: 'Install everything needed before converting',
       trailing: !controller.depsChecked
           ? null
           : allOk
@@ -35,10 +34,23 @@ class DependencyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!controller.depsChecked)
-            const Text('Load a book to check dependencies.',
-                style: TextStyle(color: AppTokens.muted))
+            const Row(children: [
+              SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppTokens.amber)),
+              SizedBox(width: 10),
+              Text('Checking your system…',
+                  style: TextStyle(color: AppTokens.muted)),
+            ])
           else
             ...deps.map((d) => _DepRow(d)),
+          if (controller.environmentReady) ...[
+            const SizedBox(height: 12),
+            const Text("You're all set — choose a book below.",
+                style: TextStyle(color: AppTokens.sage)),
+          ],
           if (missing.any((d) => d.kind.isSystemPackage)) ...[
             const SizedBox(height: 14),
             Row(
@@ -79,15 +91,19 @@ class _DepRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = dep.found;
+    // System packages are required (red when missing); downloadable assets are
+    // fetched/derived and shown as amber "pending", not as errors.
+    final isBlocking = dep.kind.isSystemPackage;
+    final (icon, color) = ok
+        ? (Icons.check_circle_rounded, AppTokens.sage)
+        : isBlocking
+            ? (Icons.cancel_rounded, AppTokens.rust)
+            : (Icons.schedule_rounded, AppTokens.amber);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Icon(
-            ok ? Icons.check_circle_rounded : Icons.cancel_rounded,
-            size: 18,
-            color: ok ? AppTokens.sage : AppTokens.rust,
-          ),
+          Icon(icon, size: 18, color: color),
           const SizedBox(width: 10),
           SizedBox(
             width: 110,

@@ -79,9 +79,12 @@ class DependencyChecker {
     return first.isEmpty ? null : first;
   }
 
-  /// A copy-paste install hint per OS for a missing system package.
+  /// A short, actionable hint for a missing dependency.
   String _hint(DependencyKind kind, HostOs os) {
-    if (!kind.isSystemPackage) return 'Downloaded in-app';
+    if (kind == DependencyKind.piper) {
+      return 'Install the piper binary, or pick a cloud engine';
+    }
+    if (!kind.isSystemPackage) return 'Fetched automatically';
     final pkg = kind == DependencyKind.espeakNg ? 'espeak-ng' : 'ffmpeg';
     return switch (os) {
       HostOs.macos => 'brew install $pkg',

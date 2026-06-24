@@ -17,24 +17,31 @@ class FilePickerCard extends StatelessWidget {
   const FilePickerCard({super.key, required this.controller});
 
   Future<void> _pick() async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['epub'],
-      dialogTitle: 'Choose an EPUB',
-    );
-    final path = result?.files.single.path;
-    if (path == null) return;
-    final bytes = await File(path).readAsBytes();
-    await controller.loadBook(bytes, path);
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['epub'],
+        dialogTitle: 'Choose an EPUB',
+      );
+      final path = result?.files.single.path;
+      if (path == null) return; // user cancelled
+      final bytes = await File(path).readAsBytes();
+      await controller.loadBook(bytes, path);
+    } on Object catch (e) {
+      controller.log.error('Could not open file: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final book = controller.book;
     return SectionCard(
-      step: 1,
+      step: 2,
       title: 'Choose your book',
-      subtitle: 'A DRM-free EPUB file',
+      subtitle: controller.environmentReady
+          ? 'A DRM-free EPUB file'
+          : 'Finish the toolkit step first',
+      dimmed: !controller.environmentReady,
       trailing: book == null
           ? null
           : const StatusPill('Loaded', icon: Icons.check_rounded),

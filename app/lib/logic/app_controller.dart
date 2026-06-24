@@ -6,6 +6,7 @@
 /// can be unit/widget-tested directly.
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -48,8 +49,11 @@ class AppController extends ChangeNotifier {
     required this.conversion,
     required this.os,
     required this.modelsDir,
+    bool checkOnStart = true,
   }) {
     conversion.addListener(notifyListeners);
+    // Verify the toolkit immediately so step 1 is populated on launch.
+    if (checkOnStart) unawaited(checkDeps());
   }
 
   Book? _book;
@@ -163,14 +167,20 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Re-runs the dependency probe for the current backend.
+  /// Re-runs the dependency probe for the current backend. Works before a book
+  /// is loaded too, using the default (Piper) backend, so the toolkit can be
+  /// verified as the very first step.
   Future<void> checkDeps() async {
-    final o = _options;
-    if (o == null) return;
-    _deps = await checker.check(o.backend, os: os);
+    final backend = _options?.backend ?? TtsBackendKind.piper;
+    _deps = await checker.check(backend, os: os);
     _depsChecked = true;
     notifyListeners();
   }
+
+  /// Whether the toolkit is ready: a check has run and every required system
+  /// package (ffmpeg/ffprobe, plus espeak-ng for Kokoro) is installed. Gates
+  /// the rest of the flow so nothing is proposed before the environment is set.
+  bool get environmentReady => _depsChecked && _depsAllFound;
 
   /// Installs missing system packages, streaming log lines, then re-checks.
   Future<void> installMissing() async {

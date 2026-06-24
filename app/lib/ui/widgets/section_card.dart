@@ -39,37 +39,40 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Opacity(
-      opacity: dimmed ? 0.55 : 1,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTokens.pad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _StepChip(step),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: text.titleLarge),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 2),
-                          Text(subtitle!, style: text.bodySmall),
+    return IgnorePointer(
+      ignoring: dimmed,
+      child: Opacity(
+        opacity: dimmed ? 0.55 : 1,
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTokens.pad),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _StepChip(step),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: text.titleLarge),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 2),
+                            Text(subtitle!, style: text.bodySmall),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  ?trailing,
-                ],
-              ),
-              const SizedBox(height: 18),
-              child,
-            ],
+                    ?trailing,
+                  ],
+                ),
+                const SizedBox(height: 18),
+                child,
+              ],
+            ),
           ),
         ),
       ),
@@ -115,7 +118,12 @@ class StatusPill extends StatelessWidget {
   /// Optional leading icon.
   final IconData? icon;
 
-  const StatusPill(this.label, {super.key, this.color = AppTokens.sage, this.icon});
+  const StatusPill(
+    this.label, {
+    super.key,
+    this.color = AppTokens.sage,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,9 +141,14 @@ class StatusPill extends StatelessWidget {
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 6),
           ],
-          Text(label,
-              style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

@@ -34,9 +34,9 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   const _Header(),
                   const SizedBox(height: 28),
-                  FilePickerCard(controller: controller),
-                  const SizedBox(height: 16),
                   DependencyCard(controller: controller),
+                  const SizedBox(height: 16),
+                  FilePickerCard(controller: controller),
                   const SizedBox(height: 16),
                   OptionsPanel(controller: controller),
                   const SizedBox(height: 16),
