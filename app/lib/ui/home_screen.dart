@@ -275,13 +275,7 @@ class _Header extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTokens.amberBright, AppTokens.amber],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
@@ -291,8 +285,10 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.auto_stories_rounded,
-              color: AppTokens.ink, size: 26),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset('assets/logo.png', width: 52, height: 52),
+          ),
         ),
         const SizedBox(width: 16),
         Column(

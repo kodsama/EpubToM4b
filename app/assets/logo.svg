@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2C078"/>
+      <stop offset="1" stop-color="#E0A458"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- headphone band -->
+  <path d="M101 300 A 155 155 0 0 1 411 300" fill="none" stroke="#2A2018" stroke-width="30" stroke-linecap="round"/>
+  <!-- earcups -->
+  <rect x="86" y="286" width="46" height="92" rx="20" fill="#2A2018"/>
+  <rect x="380" y="286" width="46" height="92" rx="20" fill="#2A2018"/>
+  <!-- book left page -->
+  <path d="M256 320 C224 304,168 304,132 312 C124 314,120 320,120 328 L120 396 C120 404,126 408,134 406 C168 398,224 400,256 414 Z" fill="#F3E9DC"/>
+  <!-- book right page -->
+  <path d="M256 320 C288 304,344 304,380 312 C388 314,392 320,392 328 L392 396 C392 404,386 408,378 406 C344 398,288 400,256 414 Z" fill="#F3E9DC"/>
+  <!-- spine -->
+  <rect x="252" y="320" width="8" height="94" rx="4" fill="#E7D9C6"/>
+  <!-- page lines -->
+  <path d="M150 340 C180 334,214 335,238 345" stroke="#D9C7AE" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M150 362 C180 356,214 357,238 367" stroke="#D9C7AE" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M362 340 C332 334,298 335,274 345" stroke="#D9C7AE" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M362 362 C332 356,298 357,274 367" stroke="#D9C7AE" stroke-width="6" fill="none" stroke-linecap="round"/>
+</svg>
