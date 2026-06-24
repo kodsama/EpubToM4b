@@ -25,7 +25,8 @@ modules:
       - ln -s /app/share/audiobook_studio/cli/bin/audiobook_studio /app/bin/audiobook_studio-cli
     sources:
       - type: dir
-        path: build/linux/x64/release/bundle
+        # Relative to this manifest (app/flatpak/), so step up to app/.
+        path: ../build/linux/x64/release/bundle
   - name: ffmpeg-static
     buildsystem: simple
     build-options:

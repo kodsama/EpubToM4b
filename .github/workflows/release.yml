@@ -73,6 +73,31 @@ jobs:
           wget -qO /tmp/appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x /tmp/appimagetool
 
+      # ffmpeg-kit is mobile-only here — desktop uses the system ffmpeg binary.
+      # Its Windows build hook is broken (archive extraction through the plugin
+      # symlink) and on macOS it just bloats the bundle, so strip its
+      # macos/windows platform support from the pub cache; the desktop build then
+      # skips it. (Linux isn't supported by the plugin, so it's already skipped.)
+      - name: Strip ffmpeg-kit from desktop build
+        if: matrix.target == 'macos' || matrix.target == 'windows'
+        working-directory: app
+        shell: bash
+        run: |
+          flutter pub get
+          python3 - <<'PY'
+          import os, glob, re
+          roots = [os.environ.get('PUB_CACHE',''), os.path.expanduser('~/.pub-cache'),
+                   os.path.join(os.environ.get('LOCALAPPDATA',''),'Pub','Cache'),
+                   os.path.join(os.environ.get('APPDATA',''),'Pub','Cache')]
+          pkg = next((h for r in roots if r
+                      for h in glob.glob(os.path.join(r,'hosted','*','ffmpeg_kit_flutter_new-*'))), None)
+          assert pkg, f'ffmpeg_kit_flutter_new not found under {roots}'
+          p = os.path.join(pkg, 'pubspec.yaml'); s = open(p).read()
+          for plat in ('macos', 'windows'):
+              s = re.sub(r'^      ' + plat + r':\n(?:        .*\n)+', '', s, flags=re.M)
+          open(p, 'w').write(s); print('patched', p)
+          PY
+
       - name: Build desktop app (obfuscated)
         working-directory: app
         run: flutter build ${{ matrix.target }} --release --obfuscate --split-debug-info=build/symbols/${{ matrix.target }}
