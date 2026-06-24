@@ -74,11 +74,39 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           }
 
-          Widget step(int n, Widget Function(bool expanded, VoidCallback toggle) build) =>
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: build(_expanded == n, () => _toggle(n)),
-              );
+          // A step = its card plus, when expanded, a Continue button that
+          // advances to the next step (enabled once the step is satisfied).
+          Widget step(
+            int n,
+            Widget Function(bool expanded, VoidCallback toggle) build, {
+            bool canContinue = false,
+            String continueLabel = 'Continue',
+          }) {
+            // Steps 1–3 get a Continue button; step 4's Convert action advances
+            // to step 5 itself, and step 5 is terminal.
+            final showContinue = _expanded == n && n < 4;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                children: [
+                  build(_expanded == n, () => _toggle(n)),
+                  if (showContinue)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed:
+                              canContinue ? () => setState(() => _expanded = n + 1) : null,
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                          label: Text(continueLabel),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }
 
           return Stack(
             children: [
@@ -92,26 +120,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         const _Header(),
                         const SizedBox(height: 24),
                         step(
-                            1,
-                            (e, t) => DependencyCard(
-                                controller: _c,
-                                expanded: e,
-                                onToggle: t,
-                                done: current > 1)),
+                          1,
+                          (e, t) => DependencyCard(
+                              controller: _c,
+                              expanded: e,
+                              onToggle: t,
+                              done: current > 1),
+                          canContinue: _c.coreToolsReady,
+                        ),
                         step(
-                            2,
-                            (e, t) => FilePickerCard(
-                                controller: _c,
-                                expanded: e,
-                                onToggle: t,
-                                done: current > 2)),
+                          2,
+                          (e, t) => FilePickerCard(
+                              controller: _c,
+                              expanded: e,
+                              onToggle: t,
+                              done: current > 2),
+                          canContinue: _c.book != null,
+                        ),
                         step(
-                            3,
-                            (e, t) => OptionsPanel(
-                                controller: _c,
-                                expanded: e,
-                                onToggle: t,
-                                done: current > 3)),
+                          3,
+                          (e, t) => OptionsPanel(
+                              controller: _c,
+                              expanded: e,
+                              onToggle: t,
+                              done: current > 3),
+                          canContinue: _c.canConvert,
+                          continueLabel: 'Continue to convert',
+                        ),
                         step(
                             4,
                             (e, t) => ConvertBar(
