@@ -1,8 +1,34 @@
 # Driving Audiobook Studio from an agent
 
-The converter is usable headlessly via a Dart CLI that reuses the app's engine
-(EPUB parsing, local sherpa-onnx TTS, ffmpeg assembly, model downloads). It is
-designed to be discovered and driven programmatically.
+The converter is usable headlessly two ways, both reusing the app's engine
+(EPUB parsing, local sherpa-onnx TTS, ffmpeg assembly, model downloads):
+
+- a **JSON CLI** (`audiobook_studio <command> --json`), and
+- a built-in **MCP server** (`audiobook_studio mcp`) for AI clients.
+
+Both are designed to be discovered and driven programmatically.
+
+## MCP server (for AI clients)
+
+`audiobook_studio mcp` runs a Model Context Protocol server over stdio
+(newline-delimited JSON-RPC 2.0). Register it with an MCP client:
+
+```json
+{
+  "mcpServers": {
+    "audiobook-studio": { "command": "/path/to/audiobook_studio", "args": ["mcp"] }
+  }
+}
+```
+
+In Claude Code: `claude mcp add audiobook-studio /path/to/audiobook_studio mcp`.
+The `audiobook_studio` binary is bundled in every desktop package (e.g.
+`Audiobook Studio.app/Contents/Resources/cli/bin/audiobook_studio` on macOS).
+
+Tools exposed: `get_book_info(path)`, `list_models()`,
+`download_model(model_id)`, `convert_audiobook(path, engine?, model?, voice?,
+language?, speed?, bitrate?, cover?, chapters?, output?, api_key?)`. Each returns
+a JSON text payload; `convert_audiobook` returns `{output, chapters}` when done.
 
 ## Discover the interface
 

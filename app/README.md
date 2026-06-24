@@ -1,19 +1,15 @@
 # Audiobook Studio
 
-A cross-platform **Flutter desktop app** (macOS / Linux / Windows) that turns a
-DRM-free **EPUB** into a chaptered **`.m4b` audiobook** — with a modern GUI,
-one-click dependency installation, pluggable text-to-speech engines,
-multi-language narration, and live global + per-chapter progress.
+A cross-platform **Flutter app** for **macOS · Windows · Linux · Android · iOS**
+that turns a DRM-free **EPUB** into a chaptered **`.m4b` audiobook** — with a
+modern GUI, one-click model downloads, pluggable text-to-speech engines,
+multi-language narration, and live global + per-chapter progress. It also ships
+a headless **CLI** and an **MCP server** (desktop) for terminals and AI clients.
 
-It is the GUI successor to the project's original `epub_to_m4b.py` CLI. **No
-Python at runtime** — all logic is Dart; the app orchestrates a few native
-binaries (`ffmpeg`, `piper`, `espeak-ng`) and cloud TTS over HTTP.
-
-> **Status / verification note:** the macOS path is fully built and verified on
-> the development machine. The Linux/Windows installer paths and the Kokoro
-> ONNX backend are implemented against the same interfaces and unit-tested with
-> fakes, but need verification on real Linux/Windows hardware and with the
-> Kokoro runtime wired in (see [ARCHITECTURE.md](ARCHITECTURE.md) §Kokoro).
+**No Python at runtime** — all logic is Dart. On desktop the app orchestrates the
+system `ffmpeg`; on Android/iOS ffmpeg is bundled in-process (ffmpeg-kit, audio
+build) and the finished file is delivered via the share sheet. Local TTS is
+sherpa-onnx (offline); cloud TTS is OpenAI / ElevenLabs over HTTP.
 
 ---
 
@@ -138,8 +134,10 @@ output (auto-detected), or pass `--sherpa-lib <dir>` to point at it explicitly.
 
 `audiobook_studio schema` prints a JSON description of every command, option,
 model, output event and exit code — an agent can learn the whole interface in
-one call. See [`../AGENTS.md`](../AGENTS.md) for the recommended flow and the
-`--json` event contract.
+one call. For AI clients, `audiobook_studio mcp` runs a **Model Context Protocol**
+server over stdio exposing `get_book_info`, `list_models`, `download_model` and
+`convert_audiobook`. See [`../AGENTS.md`](../AGENTS.md) for registration, the
+recommended flow and the `--json` event contract.
 
 ## License
 
@@ -165,7 +163,8 @@ module map and how to add a new backend or language.
 ## Not yet supported (documented follow-ups)
 
 - `.mobi` / `.azw` input (EPUB only for now).
-- Kokoro ONNX inference is wired to its interface but needs the native
-  onnxruntime + model download verified on real hardware.
-- Linux/Windows installer paths need verification on those platforms.
-- Mobile/web targets; cloud cost estimation in the UI.
+- iOS distribution: CI builds an **unsigned** `.ipa`; installing on a device
+  needs re-signing with an Apple Developer identity.
+- On-device (Android/iOS) conversion is wired and compiles in CI, but end-to-end
+  runtime hasn't been exercised on physical hardware.
+- Web target; cloud cost estimation in the UI.

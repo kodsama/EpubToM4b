@@ -200,6 +200,9 @@ jobs:
           dotnet tool install --global wix --version 5.0.2
           $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
           $ver = "${env:TAG}".TrimStart('v')
+          # Absolute source path: a relative Include is resolved against the
+          # install dir name, which broke harvesting (WIX8601).
+          $rel = (Resolve-Path "build/windows/x64/runner/Release").Path
           @"
           <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
             <Package Name="Audiobook Studio" Manufacturer="Kodsama" Version="$ver" UpgradeCode="9F3A2C1E-7B4D-4E2A-9C6F-1A2B3C4D5E6F" Scope="perMachine">
@@ -207,7 +210,7 @@ jobs:
               <MediaTemplate EmbedCab="yes" />
               <StandardDirectory Id="ProgramFiles64Folder">
                 <Directory Id="INSTALLFOLDER" Name="Audiobook Studio">
-                  <Files Include="build\windows\x64\runner\Release\**" />
+                  <Files Include="$rel\**" />
                 </Directory>
               </StandardDirectory>
             </Package>

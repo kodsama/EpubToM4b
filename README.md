@@ -1,7 +1,13 @@
-# Audiobook Studio (EpubToM4b)
+<p align="center">
+  <img src="app/assets/logo.png" alt="Audiobook Studio logo" width="160">
+</p>
 
-[![CI](https://github.com/kodsama/EpubToM4b/actions/workflows/ci.yml/badge.svg)](https://github.com/kodsama/EpubToM4b/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+<h1 align="center">Audiobook Studio</h1>
+
+<p align="center">
+  <a href="https://github.com/kodsama/AudiobookStudio/actions/workflows/ci.yml"><img src="https://github.com/kodsama/AudiobookStudio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
+</p>
 
 Turn a DRM-free **EPUB** into a chaptered **`.m4b` audiobook** — chapters,
 title/author tags and cover art embedded, so it shows up properly in Apple
@@ -41,6 +47,42 @@ dart run audiobook_studio convert book.epub --engine local --model piper --json
 
 `audiobook_studio schema` prints a JSON description of the whole interface for
 agents. See [`AGENTS.md`](AGENTS.md) and [`app/README.md`](app/README.md).
+
+## Use it from an AI assistant (MCP server)
+
+Audiobook Studio has a built-in **Model Context Protocol** server, so an AI
+client can drive conversions directly. It exposes four tools:
+
+| Tool | What it does |
+|---|---|
+| `get_book_info` | title, author, language, cover, chapters of an EPUB |
+| `list_models` | local TTS models + install state |
+| `download_model` | fetch a local model for offline use |
+| `convert_audiobook` | convert an EPUB to a chaptered `.m4b` |
+
+Start it (stdio transport):
+
+```bash
+cd app
+dart run audiobook_studio mcp        # dev — or use the bundled binary in any release
+```
+
+Register it with an MCP client (Claude Code, Claude Desktop, …):
+
+```json
+{
+  "mcpServers": {
+    "audiobook-studio": {
+      "command": "/path/to/audiobook_studio",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+The `audiobook_studio` binary is bundled inside every desktop package (e.g.
+`Audiobook Studio.app/Contents/Resources/cli/bin/` on macOS). In Claude Code:
+`claude mcp add audiobook-studio /path/to/audiobook_studio mcp`.
 
 ## Docs
 
