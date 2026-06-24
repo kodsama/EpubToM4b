@@ -33,12 +33,13 @@ modules:
       build-args:
         - --share=network
     build-commands:
+      # BtbN tarball nests the binaries under <root>/bin/.
       - tar xf ffmpeg.tar.xz --strip-components=1
-      - install -Dm755 ffmpeg /app/bin/ffmpeg
-      - install -Dm755 ffprobe /app/bin/ffprobe
+      - install -Dm755 bin/ffmpeg /app/bin/ffmpeg
+      - install -Dm755 bin/ffprobe /app/bin/ffprobe
     sources:
+      # GitHub-hosted static build (johnvansickle's host 415s flatpak-builder).
       - type: file
-        url: https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+        url: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-24-13-41/ffmpeg-n8.1.2-linux64-gpl-8.1.tar.xz
         dest-filename: ffmpeg.tar.xz
-        # Rolling "release" build — bump this sha256 when upstream ffmpeg updates.
-        sha256: abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67
+        sha256: db78ca2f02f39666fac26a6f31c3816447a0a668d05279d61aed5023ce55783b
