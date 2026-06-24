@@ -29,6 +29,7 @@ TtsBackend makeBackend(
           (throw StateError('Unknown local model: ${options.voiceId}'));
       return SherpaTtsBackend(
         model: model,
+        languageCode: options.languageCode,
         installer: sherpa,
         speed: options.speed,
       );

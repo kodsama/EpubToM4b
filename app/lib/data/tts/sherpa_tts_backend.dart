@@ -2,8 +2,8 @@
 ///
 /// One backend runs every local model family (VITS/Piper, MMS, Kokoro, Matcha,
 /// Kitten): sherpa-onnx handles phonemization, tokenization and inference
-/// internally. The model files come from [SherpaModelInstaller]; the family in
-/// the [SherpaModel] descriptor selects the right sub-config.
+/// internally. The engine bundles per-language voices; the voice matching the
+/// conversion language is selected and its family selects the sub-config.
 library;
 
 import 'dart:io';
@@ -16,15 +16,20 @@ import '../deps/sherpa_model_installer.dart';
 import 'sherpa_catalog.dart';
 import 'tts_backend.dart';
 
-/// A [TtsBackend] that synthesizes with a downloaded sherpa-onnx [SherpaModel].
+/// A [TtsBackend] that synthesizes with a downloaded sherpa-onnx engine, using
+/// the voice that matches [languageCode].
 class SherpaTtsBackend extends TtsBackend {
   final SherpaModel model;
+  final String languageCode;
   final SherpaModelInstaller installer;
   final double speed;
   final int numThreads;
 
+  late final SherpaVoice _voice = model.voiceFor(languageCode);
+
   SherpaTtsBackend({
     required this.model,
+    required this.languageCode,
     required this.installer,
     this.speed = 1.0,
     this.numThreads = 2,
@@ -34,7 +39,7 @@ class SherpaTtsBackend extends TtsBackend {
   sherpa.OfflineTts? _tts;
 
   @override
-  int get sampleRate => model.sampleRate;
+  int get sampleRate => _voice.sampleRate;
 
   @override
   int get maxChars => 1800;
@@ -46,52 +51,52 @@ class SherpaTtsBackend extends TtsBackend {
   @override
   List<Voice> voicesFor(String languageCode) => const [];
 
-  /// Builds the sherpa config for this model's family and opens the engine.
+  /// Builds the sherpa config for the selected voice's family and opens it.
   void _ensureLoaded() {
     if (_tts != null) return;
     if (!_bindingsReady) {
       sherpa.initBindings();
       _bindingsReady = true;
     }
-    final dir = installer.dirOf(model);
-    final modelCfg = switch (model.family) {
+    final v = _voice;
+    final modelCfg = switch (v.family) {
       SherpaFamily.vits => sherpa.OfflineTtsModelConfig(
           vits: sherpa.OfflineTtsVitsModelConfig(
-            model: installer.modelPath(model),
-            tokens: installer.fileIn(model, model.tokensFile),
-            dataDir: installer.fileIn(model, model.dataDir),
+            model: installer.modelPath(v),
+            tokens: installer.fileIn(v, v.tokensFile),
+            dataDir: installer.fileIn(v, v.dataDir),
           ),
           numThreads: numThreads,
           debug: false,
         ),
       SherpaFamily.kokoro => sherpa.OfflineTtsModelConfig(
           kokoro: sherpa.OfflineTtsKokoroModelConfig(
-            model: installer.modelPath(model),
-            voices: installer.fileIn(model, model.voicesFile),
-            tokens: installer.fileIn(model, model.tokensFile),
-            dataDir: installer.fileIn(model, model.dataDir),
-            lexicon: _joinLexicon(dir, model.lexicon),
-            lang: model.lang,
+            model: installer.modelPath(v),
+            voices: installer.fileIn(v, v.voicesFile),
+            tokens: installer.fileIn(v, v.tokensFile),
+            dataDir: installer.fileIn(v, v.dataDir),
+            lexicon: _joinLexicon(installer.dirOf(v), v.lexicon),
+            lang: v.lang,
           ),
           numThreads: numThreads,
           debug: false,
         ),
       SherpaFamily.matcha => sherpa.OfflineTtsModelConfig(
           matcha: sherpa.OfflineTtsMatchaModelConfig(
-            acousticModel: installer.modelPath(model),
-            vocoder: installer.vocoderPath(model),
-            tokens: installer.fileIn(model, model.tokensFile),
-            dataDir: installer.fileIn(model, model.dataDir),
+            acousticModel: installer.modelPath(v),
+            vocoder: installer.vocoderPath(v),
+            tokens: installer.fileIn(v, v.tokensFile),
+            dataDir: installer.fileIn(v, v.dataDir),
           ),
           numThreads: numThreads,
           debug: false,
         ),
       SherpaFamily.kitten => sherpa.OfflineTtsModelConfig(
           kitten: sherpa.OfflineTtsKittenModelConfig(
-            model: installer.modelPath(model),
-            voices: installer.fileIn(model, model.voicesFile),
-            tokens: installer.fileIn(model, model.tokensFile),
-            dataDir: installer.fileIn(model, model.dataDir),
+            model: installer.modelPath(v),
+            voices: installer.fileIn(v, v.voicesFile),
+            tokens: installer.fileIn(v, v.tokensFile),
+            dataDir: installer.fileIn(v, v.dataDir),
           ),
           numThreads: numThreads,
           debug: false,
@@ -103,10 +108,7 @@ class SherpaTtsBackend extends TtsBackend {
   /// Resolves comma-separated lexicon file names to absolute paths.
   static String _joinLexicon(String dir, String lexicon) {
     if (lexicon.isEmpty) return '';
-    return lexicon
-        .split(',')
-        .map((f) => '$dir/${f.trim()}')
-        .join(',');
+    return lexicon.split(',').map((f) => '$dir/${f.trim()}').join(',');
   }
 
   @override

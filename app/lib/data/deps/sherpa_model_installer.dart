@@ -10,8 +10,9 @@ import 'package:path/path.dart' as p;
 
 import '../tts/sherpa_catalog.dart';
 
-/// Resolves model file paths under a models dir and downloads/extracts the
-/// `.tar.bz2` archives (plus any separate Matcha vocoder).
+/// Resolves voice file paths under a models dir and downloads/extracts the
+/// `.tar.bz2` archives (plus any separate Matcha vocoder). Installing an engine
+/// downloads every language voice it bundles.
 class SherpaModelInstaller {
   /// Root models directory.
   final String modelsDir;
@@ -24,46 +25,51 @@ class SherpaModelInstaller {
   /// Directory holding all sherpa models.
   String get root => p.join(modelsDir, 'sherpa');
 
-  /// The extracted directory for [model].
-  String dirOf(SherpaModel model) => p.join(root, model.dirName);
+  /// The extracted directory for [voice].
+  String dirOf(SherpaVoice voice) => p.join(root, voice.dirName);
 
-  /// Absolute path to the main model file.
-  String modelPath(SherpaModel model) => p.join(dirOf(model), model.modelFile);
+  /// Absolute path to a voice's main model file.
+  String modelPath(SherpaVoice voice) => p.join(dirOf(voice), voice.modelFile);
 
-  /// Absolute path to a relative file within the model dir.
-  String fileIn(SherpaModel model, String relative) =>
-      relative.isEmpty ? '' : p.join(dirOf(model), relative);
+  /// Absolute path to a relative file within the voice dir ('' stays '').
+  String fileIn(SherpaVoice voice, String relative) =>
+      relative.isEmpty ? '' : p.join(dirOf(voice), relative);
 
   /// Absolute vocoder path (Matcha), or '' if none.
-  String vocoderPath(SherpaModel model) =>
-      model.vocoderFile.isEmpty ? '' : p.join(dirOf(model), model.vocoderFile);
+  String vocoderPath(SherpaVoice voice) =>
+      voice.vocoderFile.isEmpty ? '' : p.join(dirOf(voice), voice.vocoderFile);
 
-  /// Whether [model] (and its vocoder, if any) is fully downloaded.
-  bool isInstalled(SherpaModel model) {
-    if (!File(modelPath(model)).existsSync()) return false;
-    if (model.vocoderFile.isNotEmpty && !File(vocoderPath(model)).existsSync()) {
+  /// Whether a single [voice] (and its vocoder, if any) is downloaded.
+  bool isVoiceInstalled(SherpaVoice voice) {
+    if (!File(modelPath(voice)).existsSync()) return false;
+    if (voice.vocoderFile.isNotEmpty && !File(vocoderPath(voice)).existsSync()) {
       return false;
     }
     return true;
   }
 
-  /// Downloads + extracts [model] (and vocoder) if missing, streaming progress.
+  /// Whether every voice of [model] is installed.
+  bool isInstalled(SherpaModel model) =>
+      model.voices.every(isVoiceInstalled);
+
+  /// Downloads + extracts every missing voice of [model], streaming progress.
   Stream<String> ensureInstalled(SherpaModel model) async* {
     Directory(root).createSync(recursive: true);
-    if (File(modelPath(model)).existsSync()) {
-      yield '${model.label} already installed.';
-    } else {
-      yield 'Downloading ${model.label} (~${model.sizeMb} MB)…';
-      final bytes = await _download(model.archiveUrl);
-      yield 'Extracting ${model.label}…';
-      _extractTarBz2(bytes, root);
-      yield '${model.label} installed.';
-    }
-    if (model.vocoderFile.isNotEmpty && !File(vocoderPath(model)).existsSync()) {
-      yield 'Downloading vocoder…';
-      final vb = await _download(model.vocoderUrl);
-      File(vocoderPath(model)).writeAsBytesSync(vb);
-      yield 'Vocoder installed.';
+    for (final voice in model.voices) {
+      final langs = voice.languages.map((l) => l.toUpperCase()).join('/');
+      if (File(modelPath(voice)).existsSync()) {
+        yield '${model.label} ($langs) already installed.';
+      } else {
+        yield 'Downloading ${model.label} ($langs, ~${voice.sizeMb} MB)…';
+        _extractTarBz2(await _download(voice.archiveUrl), root);
+        yield '${model.label} ($langs) installed.';
+      }
+      if (voice.vocoderFile.isNotEmpty &&
+          !File(vocoderPath(voice)).existsSync()) {
+        yield 'Downloading vocoder…';
+        File(vocoderPath(voice)).writeAsBytesSync(await _download(voice.vocoderUrl));
+        yield 'Vocoder installed.';
+      }
     }
     yield '${model.label} is ready.';
   }

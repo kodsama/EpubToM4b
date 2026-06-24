@@ -52,11 +52,16 @@ Uint8List _fixture() {
 
 late Directory _tmp;
 
-/// Creates a fake model file so the installer reports it installed.
+/// Creates fake files for every voice of [model] so it reports installed.
 void installModelFiles(SherpaModelInstaller inst, SherpaModel model) {
-  final f = File(inst.modelPath(model));
-  f.parent.createSync(recursive: true);
-  f.writeAsBytesSync(const [0]);
+  for (final v in model.voices) {
+    final f = File(inst.modelPath(v));
+    f.parent.createSync(recursive: true);
+    f.writeAsBytesSync(const [0]);
+    if (v.vocoderFile.isNotEmpty) {
+      File(inst.vocoderPath(v)).writeAsBytesSync(const [0]);
+    }
+  }
 }
 
 ({AppController controller, SherpaModelInstaller sherpa}) build(

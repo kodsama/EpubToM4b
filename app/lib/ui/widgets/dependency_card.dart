@@ -116,7 +116,8 @@ class DependencyCard extends StatelessWidget {
   }
 }
 
-/// A local model row: status, label, language + size, and a Download button.
+/// A local engine row: status, label, language tags, size, blurb, recommended
+/// badge, and a Download button (installs all of the engine's languages).
 class _ModelRow extends StatelessWidget {
   final AppController controller;
   final SherpaModel model;
@@ -124,27 +125,52 @@ class _ModelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     final installed = controller.isModelInstalled(model);
     final downloading = controller.downloadingModelId == model.id;
     final busy = controller.downloadingModelId != null;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            installed
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked_rounded,
-            size: 18,
-            color: installed ? AppTokens.sage : AppTokens.muted,
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              installed
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              size: 18,
+              color: installed ? AppTokens.sage : AppTokens.muted,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              '${model.label}  ·  ${model.languages.map((l) => l.toUpperCase()).join('/')}  ·  ${model.sizeMb} MB',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(model.label,
+                        style: text.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    for (final l in model.languages) ...[
+                      _LangTag(l),
+                      const SizedBox(width: 4),
+                    ],
+                    if (model.recommended) ...[
+                      const SizedBox(width: 4),
+                      const StatusPill('Recommended',
+                          color: AppTokens.amber, icon: Icons.star_rounded),
+                    ],
+                    const SizedBox(width: 6),
+                    Text('~${model.sizeMb} MB', style: text.bodySmall),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(model.blurb, style: text.bodySmall),
+              ],
             ),
           ),
           const SizedBox(width: 10),
@@ -164,6 +190,29 @@ class _ModelRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// A tiny language code chip.
+class _LangTag extends StatelessWidget {
+  final String code;
+  const _LangTag(this.code);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppTokens.surfaceHigh,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: AppTokens.line),
+      ),
+      child: Text(code.toUpperCase(),
+          style: const TextStyle(
+              color: AppTokens.muted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700)),
     );
   }
 }
