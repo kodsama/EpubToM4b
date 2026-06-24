@@ -11,4 +11,4 @@ PRODUCT_NAME = audiobook_studio
 PRODUCT_BUNDLE_IDENTIFIER = com.kodsama.audiobookStudio
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.kodsama. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Kodsama. All rights reserved.
