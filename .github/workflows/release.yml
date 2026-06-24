@@ -89,6 +89,7 @@ jobs:
           set -e
           APP="build/macos/Build/Products/Release/audiobook_studio.app"
           CLI=$(echo build/cli/*/bundle)
+          mkdir -p "$CLI/lib"
           cp "$APP/Contents/Frameworks/"libsherpa-onnx-c-api.dylib "$APP/Contents/Frameworks/"libonnxruntime*.dylib "$CLI/lib/" || true
           mkdir -p "$APP/Contents/Resources/cli"
           cp -R "$CLI/bin" "$CLI/lib" "$APP/Contents/Resources/cli/"
@@ -104,6 +105,7 @@ jobs:
           VER="${TAG#v}"
           BUNDLE="build/linux/x64/release/bundle"
           CLI=$(echo build/cli/*/bundle)
+          mkdir -p "$CLI/lib"
           cp "$BUNDLE/lib/"libsherpa-onnx-c-api.so "$BUNDLE/lib/"libonnxruntime*.so "$CLI/lib/" 2>/dev/null || true
           mkdir -p "$BUNDLE/cli"; cp -R "$CLI/bin" "$CLI/lib" "$BUNDLE/cli/"
           # staged filesystem root for deb/rpm
@@ -136,6 +138,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $rel = "build/windows/x64/runner/Release"
           $cli = (Get-ChildItem build/cli/*/bundle -Directory)[0].FullName
+          New-Item -ItemType Directory -Force "$cli/lib" | Out-Null
           Copy-Item "$rel/sherpa-onnx-c-api.dll","$rel/onnxruntime.dll" "$cli/lib/" -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force "$rel/cli" | Out-Null
           Copy-Item "$cli/bin","$cli/lib" "$rel/cli/" -Recurse
@@ -196,6 +199,7 @@ jobs:
           flutter build linux --release --obfuscate --split-debug-info=build/symbols/linux
           dart build cli
           B="build/linux/x64/release/bundle"; C=$(echo build/cli/*/bundle)
+          mkdir -p "$C/lib"
           cp "$B/lib/"libsherpa-onnx-c-api.so "$B/lib/"libonnxruntime*.so "$C/lib/" 2>/dev/null || true
           mkdir -p "$B/cli"; cp -R "$C/bin" "$C/lib" "$B/cli/"
           sed -i "s/^version: .*/version: '${TAG#v}'/" snap/snapcraft.yaml
@@ -240,6 +244,7 @@ jobs:
           flutter build linux --release --obfuscate --split-debug-info=build/symbols/linux
           dart build cli
           B="build/linux/x64/release/bundle"; C=$(echo build/cli/*/bundle)
+          mkdir -p "$C/lib"
           cp "$B/lib/"libsherpa-onnx-c-api.so "$B/lib/"libonnxruntime*.so "$C/lib/" 2>/dev/null || true
           mkdir -p "$B/cli"; cp -R "$C/bin" "$C/lib" "$B/cli/"
       - name: flatpak-builder
