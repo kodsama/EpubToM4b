@@ -41,6 +41,15 @@ class AppController extends ChangeNotifier {
   final ConversionController conversion;
   final HostOs os;
 
+  /// Base directory for the output `.m4b`. When null (desktop), output defaults
+  /// next to the source file; on mobile the app passes its documents directory
+  /// because writing beside the picked file is not permitted.
+  final String? outputDir;
+
+  /// Base directory for scratch files. When null (desktop), work happens next to
+  /// the source file; on mobile the app passes a temporary directory.
+  final String? workBaseDir;
+
   AppController({
     required this.parser,
     required this.ffmpeg,
@@ -51,6 +60,8 @@ class AppController extends ChangeNotifier {
     required this.log,
     required this.conversion,
     required this.os,
+    this.outputDir,
+    this.workBaseDir,
     bool checkOnStart = true,
   }) {
     conversion.addListener(notifyListeners);
@@ -118,12 +129,13 @@ class AppController extends ChangeNotifier {
       _book = book;
       await checkDeps();
       final backend = preferredBackend();
-      final dir = p.dirname(sourcePath);
       final safe = _safeName(book.title);
+      final outBase = outputDir ?? p.dirname(sourcePath);
+      final workBase = workBaseDir ?? p.dirname(sourcePath);
       _options = ConversionOptions.defaults(
         book,
-        outputPath: p.join(dir, '$safe.m4b'),
-        workDir: p.join(dir, '$safe.work'),
+        outputPath: p.join(outBase, '$safe.m4b'),
+        workDir: p.join(workBase, '$safe.work'),
         voiceId: _defaultVoice(backend, book.languageCode),
       ).copyWith(backend: backend);
       log.info('Loaded "${book.title}" — ${book.chapters.length} chapters '

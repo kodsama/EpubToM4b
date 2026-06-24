@@ -5,8 +5,10 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../logic/app_controller.dart';
+import '../util/platform_env.dart';
 import 'theme.dart';
 import 'widgets/convert_bar.dart';
 import 'widgets/dependency_card.dart';
@@ -53,6 +55,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _toggle(int step) =>
       setState(() => _expanded = _expanded == step ? 0 : step);
+
+  /// Opens the platform share sheet for the finished audiobook (mobile only,
+  /// where output lives in app-scoped storage).
+  Future<void> _shareOutput() async {
+    final path = _c.options?.outputPath;
+    if (path == null) return;
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(path)], text: _c.book?.title ?? 'Audiobook'),
+    );
+  }
 
   void _toggleLog() => setState(() {
         _logOpen = !_logOpen;
@@ -159,7 +171,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             (e, t) => ProgressView(
                                 progress: _c.progress,
                                 expanded: e,
-                                onToggle: t)),
+                                onToggle: t,
+                                onShare: isMobilePlatform ? _shareOutput : null)),
                       ],
                     ),
                   ),

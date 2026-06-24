@@ -9,6 +9,7 @@ import '../../data/tts/sherpa_catalog.dart';
 import '../../data/tts/voice_catalog.dart';
 import '../../domain/conversion_options.dart';
 import '../../logic/app_controller.dart';
+import '../../util/platform_env.dart';
 import '../theme.dart';
 import 'section_card.dart';
 
@@ -319,8 +320,11 @@ class _OutputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final o = controller.options!;
+    // On mobile there is no folder picker; output lands in app storage and is
+    // shared from the progress step. Show just the filename + a hint.
+    final display = isMobilePlatform ? p.basename(o.outputPath) : o.outputPath;
     return _Labeled(
-      'Save to',
+      isMobilePlatform ? 'Saves as (share when done)' : 'Save to',
       Row(
         children: [
           Expanded(
@@ -331,16 +335,18 @@ class _OutputField extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppTokens.line),
               ),
-              child: Text(o.outputPath,
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              child:
+                  Text(display, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
-          const SizedBox(width: 12),
-          OutlinedButton.icon(
-            onPressed: _pickLocation,
-            icon: const Icon(Icons.folder_open_rounded, size: 16),
-            label: const Text('Change'),
-          ),
+          if (!isMobilePlatform) ...[
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: _pickLocation,
+              icon: const Icon(Icons.folder_open_rounded, size: 16),
+              label: const Text('Change'),
+            ),
+          ],
         ],
       ),
     );

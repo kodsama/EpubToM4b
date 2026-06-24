@@ -10,7 +10,12 @@ import '../process_runner.dart';
 class DependencyChecker {
   final ProcessRunner _runner;
 
-  DependencyChecker(this._runner);
+  /// When true, ffmpeg/ffprobe are bundled in-process (mobile, ffmpeg-kit) and
+  /// reported as present without probing the host — `which`/`where` would crash
+  /// on iOS, where spawning subprocesses is forbidden.
+  final bool bundled;
+
+  DependencyChecker(this._runner, {this.bundled = false});
 
   /// Dependencies required to run [backend] — ffmpeg/ffprobe for every engine.
   List<DependencyKind> requiredFor(TtsBackendKind backend) =>
@@ -23,8 +28,15 @@ class DependencyChecker {
   }) =>
       checkAll(os: os);
 
-  /// Probes every system dependency.
+  /// Probes every system dependency. When [bundled] (mobile), reports them all
+  /// as present since ffmpeg-kit ships them in-process.
   Future<List<DependencyStatus>> checkAll({required HostOs os}) async {
+    if (bundled) {
+      return [
+        for (final kind in DependencyKind.values)
+          DependencyStatus(kind: kind, found: true, location: 'bundled'),
+      ];
+    }
     final result = <DependencyStatus>[];
     for (final kind in DependencyKind.values) {
       result.add(await _probe(kind, os));

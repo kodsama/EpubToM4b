@@ -13,9 +13,21 @@ import '../process_runner.dart';
 /// markers with correct cumulative timestamps.
 typedef ChapterTiming = ({Chapter chapter, int durationMs});
 
-/// Wraps the `ffmpeg`/`ffprobe` binaries. Pure string building (ffmetadata) is
-/// separated from process execution so it can be unit-tested without ffmpeg.
-class FfmpegService {
+/// The execution seam for ffmpeg/ffprobe.
+///
+/// Desktop (and the CLI) run the system binaries via a [ProcessRunner];
+/// Android/iOS swap in an in-process engine (ffmpeg-kit) because spawning a
+/// subprocess is forbidden on iOS and unavailable on Android.
+abstract class FfmpegExecutor {
+  /// Runs ffmpeg with [args]; throws on a non-zero/failed result.
+  Future<void> run(List<String> args);
+
+  /// Returns the media duration of [path] in milliseconds (ffprobe).
+  Future<int> durationMs(String path);
+}
+
+/// Default [FfmpegExecutor] backed by the system `ffmpeg`/`ffprobe` binaries.
+class ProcessFfmpegExecutor implements FfmpegExecutor {
   final ProcessRunner _runner;
 
   /// Name/path of the ffmpeg binary.
@@ -24,7 +36,45 @@ class FfmpegService {
   /// Name/path of the ffprobe binary.
   final String ffprobe;
 
-  FfmpegService(this._runner, {this.ffmpeg = 'ffmpeg', this.ffprobe = 'ffprobe'});
+  ProcessFfmpegExecutor(
+    this._runner, {
+    this.ffmpeg = 'ffmpeg',
+    this.ffprobe = 'ffprobe',
+  });
+
+  @override
+  Future<void> run(List<String> args) async {
+    await _runner.checked(ffmpeg, args);
+  }
+
+  @override
+  Future<int> durationMs(String path) async {
+    final r = await _runner.checked(ffprobe, [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      path,
+    ]);
+    return (double.parse(r.stdout.trim()) * 1000).round();
+  }
+}
+
+/// Wraps ffmpeg/ffprobe. Pure string building (ffmetadata) is separated from
+/// execution so it can be unit-tested without ffmpeg, and execution itself is
+/// delegated to a pluggable [FfmpegExecutor] so the same pipeline runs on
+/// desktop (system binaries) and mobile (in-process ffmpeg-kit).
+class FfmpegService {
+  final FfmpegExecutor _executor;
+
+  /// Builds a service. By default execution uses the system `ffmpeg`/`ffprobe`
+  /// binaries via [runner] (desktop/CLI); pass [executor] to override (mobile).
+  FfmpegService(
+    ProcessRunner runner, {
+    String ffmpeg = 'ffmpeg',
+    String ffprobe = 'ffprobe',
+    FfmpegExecutor? executor,
+  }) : _executor = executor ??
+            ProcessFfmpegExecutor(runner, ffmpeg: ffmpeg, ffprobe: ffprobe);
 
   /// Merges chunk WAVs into one mono chapter WAV at [sampleRate]. A single
   /// input is simply re-encoded; multiple inputs are joined with the concat
@@ -38,7 +88,7 @@ class FfmpegService {
       throw ArgumentError('concatToChapterWav requires at least one input');
     }
     if (chunkWavs.length == 1) {
-      await _runner.checked(ffmpeg, [
+      await _executor.run([
         '-y', '-i', chunkWavs.single,
         '-ar', '$sampleRate', '-ac', '1', outWav,
       ]);
@@ -51,7 +101,7 @@ class FfmpegService {
     final streams =
         List.generate(chunkWavs.length, (i) => '[$i:a]').join();
     final filter = '${streams}concat=n=${chunkWavs.length}:v=0:a=1[a]';
-    await _runner.checked(ffmpeg, [
+    await _executor.run([
       '-y', ...inputs,
       '-filter_complex', filter,
       '-map', '[a]', '-ar', '$sampleRate', '-ac', '1', outWav,
@@ -59,16 +109,7 @@ class FfmpegService {
   }
 
   /// Returns the duration of [wavPath] in milliseconds via ffprobe.
-  Future<int> wavDurationMs(String wavPath) async {
-    final r = await _runner.checked(ffprobe, [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=1',
-      wavPath,
-    ]);
-    final seconds = double.parse(r.stdout.trim());
-    return (seconds * 1000).round();
-  }
+  Future<int> wavDurationMs(String wavPath) => _executor.durationMs(wavPath);
 
   /// Escapes a value for an ffmetadata file (`=`, `;`, `#`, `\`, newline).
   static String escapeMeta(String s) =>
@@ -145,6 +186,6 @@ class FfmpegService {
       '-movflags', '+faststart',
       options.outputPath,
     ];
-    await _runner.checked(ffmpeg, args);
+    await _executor.run(args);
   }
 }

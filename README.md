@@ -11,15 +11,21 @@ Two ways to use it:
 
 | | What | Where |
 |---|---|---|
-| 🖥️ **Audiobook Studio** | Cross-platform Flutter desktop app **+ headless CLI** with offline local TTS (sherpa-onnx: Piper/VITS, MMS, Kokoro, Matcha, Kitten) and cloud TTS (OpenAI / ElevenLabs). Modern stepped UI, one-click model downloads, terminal/agent-friendly CLI. | [`app/`](app/) → [README](app/README.md) |
+| 🖥️📱 **Audiobook Studio** | Flutter app for **macOS · Windows · Linux · Android · iOS** **+ a headless CLI** (desktop), with offline local TTS (sherpa-onnx: Piper/VITS, MMS, Kokoro, Matcha, Kitten) and cloud TTS (OpenAI / ElevenLabs). Modern stepped UI, one-click model downloads, terminal/agent-friendly CLI. | [`app/`](app/) → [README](app/README.md) |
 | 🐍 **`epub_to_m4b.py`** | The original single-file Python CLI (Kokoro/Piper/OpenAI/ElevenLabs). | [`epub_to_m4b.py`](epub_to_m4b.py) |
+
+On desktop the app drives the system **ffmpeg**; on Android/iOS ffmpeg is bundled
+in-process (ffmpeg-kit) and the finished `.m4b` is delivered via the share sheet.
+Each tagged release publishes native packages: `.dmg` (macOS), `.exe` (Windows),
+`.deb`/`.rpm`/`.AppImage` (Linux), `.apk`/`.aab` (Android) and an **unsigned**
+`.ipa` (iOS — must be re-signed with an Apple identity to install on a device).
 
 ## Quick start — the app
 
 ```bash
 cd app
 flutter pub get
-flutter run -d macos          # or -d linux / -d windows
+flutter run -d macos          # or -d linux / -d windows / -d <android|ios device>
 ```
 
 Then follow the on-screen steps: **check the toolkit** (install a free local

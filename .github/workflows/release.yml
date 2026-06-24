@@ -163,6 +163,32 @@ jobs:
           choco install innosetup -y --no-progress
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
+      # ---------- Windows: same Release tree → .msi via WiX ----------
+      # Best-effort so a WiX hiccup never blocks the proven .exe upload.
+      - name: Package Windows (.msi)
+        if: matrix.target == 'windows'
+        continue-on-error: true
+        working-directory: app
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+          $ver = "${env:TAG}".TrimStart('v')
+          @"
+          <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+            <Package Name="Audiobook Studio" Manufacturer="Kodsama" Version="$ver" UpgradeCode="9F3A2C1E-7B4D-4E2A-9C6F-1A2B3C4D5E6F" Scope="perMachine">
+              <MajorUpgrade DowngradeErrorMessage="A newer version of Audiobook Studio is already installed." />
+              <MediaTemplate EmbedCab="yes" />
+              <StandardDirectory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="Audiobook Studio">
+                  <Files Include="build\windows\x64\runner\Release\**" />
+                </Directory>
+              </StandardDirectory>
+            </Package>
+          </Wix>
+          "@ | Out-File -Encoding utf8 product.wxs
+          wix build product.wxs -arch x64 -o AudiobookStudio-windows.msi
+
       - name: Upload to release
         working-directory: app
         shell: bash
@@ -170,7 +196,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          files=(AudiobookStudio-*.dmg AudiobookStudio-*.deb AudiobookStudio-*.rpm AudiobookStudio-*.AppImage AudiobookStudio-*setup.exe)
+          files=(AudiobookStudio-*.dmg AudiobookStudio-*.deb AudiobookStudio-*.rpm AudiobookStudio-*.AppImage AudiobookStudio-*setup.exe AudiobookStudio-*.msi)
           echo "Uploading: ${files[*]}"
           gh release upload "$TAG" "${files[@]}" --clobber --repo "${{ github.repository }}"
 
@@ -204,16 +230,16 @@ jobs:
           mkdir -p "$B/cli"; cp -R "$C/bin" "$C/lib" "$B/cli/"
           sed -i "s/^version: .*/version: '${TAG#v}'/" snap/snapcraft.yaml
       - name: Snapcraft
-        working-directory: app
-        run: |
-          sudo snap install snapcraft --classic
-          snapcraft --destructive-mode
-          mv *.snap AudiobookStudio-linux.snap
+        uses: snapcore/action-build@v1
+        id: snapcraft
+        with:
+          path: app
       - name: Upload
-        working-directory: app
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" AudiobookStudio-linux.snap --clobber --repo "${{ github.repository }}"
+        run: |
+          cp "${{ steps.snapcraft.outputs.snap }}" AudiobookStudio-linux.snap
+          gh release upload "$TAG" AudiobookStudio-linux.snap --clobber --repo "${{ github.repository }}"
 
   # ---------- Flatpak (best-effort; needs sandbox holes + bundled ffmpeg) ----------
   linux-flatpak:
@@ -236,8 +262,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config liblzma-dev flatpak flatpak-builder
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08 || true
+          # Add flathub + runtime for the SAME (--user) installation flatpak-builder uses.
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --user flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
       - name: Build app + CLI
         working-directory: app
         run: |
@@ -257,3 +284,69 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" AudiobookStudio-linux.flatpak --clobber --repo "${{ github.repository }}"
+
+  # ---------- Android: .apk (sideload) + .aab (Play Store) ----------
+  build-android:
+    name: Build Android (.apk/.aab)
+    needs: create-release
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build APK + App Bundle (obfuscated)
+        working-directory: app
+        run: |
+          flutter build apk --release --obfuscate --split-debug-info=build/symbols/android
+          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols/android
+          cp build/app/outputs/flutter-apk/app-release.apk AudiobookStudio-android.apk
+          cp build/app/outputs/bundle/release/app-release.aab AudiobookStudio-android.aab
+      - name: Upload
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" AudiobookStudio-android.apk AudiobookStudio-android.aab --clobber --repo "${{ github.repository }}"
+
+  # ---------- iOS: unsigned .ipa ----------
+  # No Apple signing certs are configured, so this produces an UNSIGNED .ipa.
+  # It is the correct container format but cannot be installed on a real device
+  # until re-signed with an Apple Developer identity (sideload tools or a paid
+  # account + provisioning profile). It builds on every release as a CI check.
+  build-ios:
+    name: Build iOS (.ipa, unsigned)
+    needs: create-release
+    runs-on: macos-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build iOS (unsigned) and package .ipa
+        working-directory: app
+        run: |
+          flutter build ios --release --no-codesign --obfuscate --split-debug-info=build/symbols/ios
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r -q AudiobookStudio-ios-unsigned.ipa Payload
+      - name: Upload
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" AudiobookStudio-ios-unsigned.ipa --clobber --repo "${{ github.repository }}"

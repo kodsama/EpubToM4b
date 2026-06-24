@@ -13,11 +13,17 @@ class ProgressView extends StatelessWidget {
   final ConversionProgress progress;
   final bool expanded;
   final VoidCallback? onToggle;
+
+  /// When set (mobile), a "Share audiobook" button appears once the run is done,
+  /// since the file lives in app-scoped storage and is delivered via the share
+  /// sheet rather than written to a user-chosen folder.
+  final VoidCallback? onShare;
   const ProgressView({
     super.key,
     required this.progress,
     this.expanded = true,
     this.onToggle,
+    this.onShare,
   });
 
   @override
@@ -60,6 +66,17 @@ class ProgressView extends StatelessWidget {
               itemBuilder: (context, i) => _ChapterRow(progress.chapters[i]),
             ),
           ),
+          if (onShare != null && progress.phase == ConvPhase.done) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onShare,
+                icon: const Icon(Icons.ios_share_rounded, size: 18),
+                label: const Text('Share audiobook'),
+              ),
+            ),
+          ],
         ],
       ),
     );
