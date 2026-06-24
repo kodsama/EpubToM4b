@@ -1,5 +1,8 @@
 # Audiobook Studio (EpubToM4b)
 
+[![CI](https://github.com/kodsama/EpubToM4b/actions/workflows/ci.yml/badge.svg)](https://github.com/kodsama/EpubToM4b/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 Turn a DRM-free **EPUB** into a chaptered **`.m4b` audiobook** — chapters,
 title/author tags and cover art embedded, so it shows up properly in Apple
 Books, VLC, BookPlayer, Smart AudioBook Player, etc.
