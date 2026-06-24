@@ -6,7 +6,9 @@ import FlutterMacOS
 import Foundation
 
 import file_picker
+import flutter_onnxruntime
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
+  FlutterOnnxruntimePlugin.register(with: registry.registrar(forPlugin: "FlutterOnnxruntimePlugin"))
 }

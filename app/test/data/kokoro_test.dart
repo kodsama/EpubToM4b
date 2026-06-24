@@ -55,7 +55,7 @@ void main() {
 
     expect(runner.exe, 'espeak-ng');
     expect(runner.args, containsAllInOrder(['-q', '--ipa']));
-    expect(runner.args, containsAllInOrder(['-v', 'fr']));
+    expect(runner.args, containsAllInOrder(['-v', 'fr-fr'])); // fr -> espeak fr-fr
     expect(runner.stdin, 'Bonjour');
     expect(phonemes, isNotEmpty);
   });

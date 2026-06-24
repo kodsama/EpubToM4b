@@ -73,19 +73,26 @@ Add `Voice` entries with the new `languageCode` for each backend that supports
 it, plus a label in `VoiceCatalog.languageLabels`. The language dropdown derives
 its options from the catalog.
 
-## §Kokoro — the one backend needing real-hardware wiring
+## §Kokoro — local ONNX engine (implemented & verified on macOS)
 
-`KokoroBackend` is structured like the others:
+`KokoroBackend` runs the Kokoro v1.0 model fully in Dart (no Python):
 
-- **Phonemization** uses `espeak-ng` through `ProcessRunner` (unit-tested by
-  asserting the argv).
-- **Inference** is hidden behind a `KokoroSession` interface so the ONNX runtime
-  is an injectable dependency. A production `OrtKokoroSession` wraps the
-  `onnxruntime` package (Dart FFI) and the downloaded `kokoro.onnx` model +
-  voice pack.
-- **Output** wraps the model's float PCM via `wav_writer`.
+- **Download** — `KokoroInstaller` fetches the int8 `kokoro.onnx` (~88 MB) and
+  `voices.bin` (~27 MB) into the app models dir, with a one-click button.
+- **Phonemization** — `espeak-ng` via `ProcessRunner` (`fr`→`fr-fr`,
+  `en`→`en-us`), unit-tested by asserting the argv.
+- **Tokenization** — the embedded 114-entry vocab (`kokoro_vocab.g.dart`,
+  generated from the model's `config.json`).
+- **Voices** — `KokoroVoices` parses the npz/npy style tables and selects the
+  256-d style row for the (unpadded) token count.
+- **Inference** — `KokoroOrtSession` uses `flutter_onnxruntime` (bundled ORT
+  1.24 on macOS) with inputs `tokens` (int64), `style` (float32 [1,256]),
+  `speed` (float32 [1]) → `audio`. Wrapped to a WAV via `wav_writer`.
 
-What remains to verify on real hardware: bundling the `onnxruntime` native
-library per platform, the phoneme→token vocabulary mapping for the exact model
-revision, and running inference in a background isolate. Until then, selecting
-Kokoro surfaces a clear message rather than failing silently.
+Verified end-to-end by an integration test (`integration_test/`) running on
+macOS that synthesizes French audio through the real onnxruntime native library.
+
+Platform notes: requires macOS deployment target ≥ 14 and `use_frameworks!
+:linkage => :static` in the macOS Podfile (both configured). Inference currently
+runs on the main isolate; moving it to a background isolate is a future
+optimization.

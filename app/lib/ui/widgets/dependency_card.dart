@@ -18,7 +18,8 @@ class DependencyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final deps = controller.deps;
     final missingRequired = controller.missingRequired;
-    final ready = controller.environmentReady;
+    final coreReady = controller.coreToolsReady;
+    final engineReady = controller.anyEngineReady;
     // Anything missing that the OS package manager can install.
     final installable =
         deps.where((d) => !d.found && d.kind.isSystemPackage).toList();
@@ -29,10 +30,13 @@ class DependencyCard extends StatelessWidget {
       subtitle: 'Required tools must be installed; optional ones can be skipped',
       trailing: !controller.depsChecked
           ? null
-          : ready
-              ? const StatusPill('Ready', icon: Icons.check_rounded)
-              : StatusPill('${missingRequired.length} required missing',
-                  color: AppTokens.rust, icon: Icons.error_outline_rounded),
+          : !coreReady
+              ? StatusPill('${missingRequired.length} required missing',
+                  color: AppTokens.rust, icon: Icons.error_outline_rounded)
+              : engineReady
+                  ? const StatusPill('Ready', icon: Icons.check_rounded)
+                  : const StatusPill('No TTS engine yet',
+                      color: AppTokens.amber, icon: Icons.mic_off_rounded),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -52,11 +56,19 @@ class DependencyCard extends StatelessWidget {
           if (controller.depsChecked) ...[
             const SizedBox(height: 12),
             Text(
-              ready
-                  ? "Required tools are ready — choose a book below. Optional engine "
-                      "tools only matter if you pick that engine."
-                  : 'Install the required tools (red) to continue.',
-              style: TextStyle(color: ready ? AppTokens.sage : AppTokens.rust),
+              !coreReady
+                  ? 'Install the required tools (red) to continue.'
+                  : engineReady
+                      ? "Ready — choose a book below."
+                      : 'Core tools are ready, but no TTS engine is set up yet. '
+                          'Choose a book, then in step 3 download Piper or Kokoro, '
+                          'or pick a cloud engine and add its API key.',
+              style: TextStyle(
+                  color: !coreReady
+                      ? AppTokens.rust
+                      : engineReady
+                          ? AppTokens.sage
+                          : AppTokens.amber),
             ),
           ],
           if (installable.isNotEmpty) ...[

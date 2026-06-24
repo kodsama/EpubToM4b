@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'data/audio/ffmpeg_service.dart';
 import 'data/deps/dependency_checker.dart';
+import 'data/deps/kokoro_installer.dart';
 import 'data/deps/piper_installer.dart';
 import 'data/epub/epub_parser.dart';
 import 'data/process_runner.dart';
@@ -32,13 +33,15 @@ AppController buildAppController({required String modelsDir}) {
   final log = LogController();
   final httpClient = http.Client();
   final piper = PiperInstaller(modelsDir: modelsDir, client: httpClient);
+  final kokoro = KokoroInstaller(modelsDir: modelsDir, client: httpClient);
   return AppController(
     parser: EpubParser(),
     ffmpeg: FfmpegService(runner),
     runner: runner,
     httpClient: httpClient,
-    checker: DependencyChecker(runner, piper: piper),
+    checker: DependencyChecker(runner, piper: piper, kokoro: kokoro),
     piperInstaller: piper,
+    kokoroInstaller: kokoro,
     log: log,
     conversion: ConversionController(log: log),
     os: currentHostOs(),

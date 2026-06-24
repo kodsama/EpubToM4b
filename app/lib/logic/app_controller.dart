@@ -16,6 +16,7 @@ import 'package:path/path.dart' as p;
 import '../data/audio/ffmpeg_service.dart';
 import '../data/deps/dependency_checker.dart';
 import '../data/deps/dependency_installer.dart';
+import '../data/deps/kokoro_installer.dart';
 import '../data/deps/piper_installer.dart';
 import '../data/epub/epub_parser.dart';
 import '../data/process_runner.dart';
@@ -36,6 +37,7 @@ class AppController extends ChangeNotifier {
   final http.Client httpClient;
   final DependencyChecker checker;
   final PiperInstaller piperInstaller;
+  final KokoroInstaller kokoroInstaller;
   final LogController log;
   final ConversionController conversion;
   final HostOs os;
@@ -48,6 +50,7 @@ class AppController extends ChangeNotifier {
     required this.httpClient,
     required this.checker,
     required this.piperInstaller,
+    required this.kokoroInstaller,
     required this.log,
     required this.conversion,
     required this.os,
@@ -193,10 +196,24 @@ class AppController extends ChangeNotifier {
   List<DependencyStatus> get missingRequired =>
       _deps.where((d) => d.kind.isRequired && !d.found).toList();
 
-  /// Whether the toolkit is ready to proceed: every *required* dependency
-  /// (ffmpeg/ffprobe) is present. Engine-specific tools are optional and don't
-  /// block choosing a book — they only gate that specific engine.
-  bool get environmentReady => _depsChecked && missingRequired.isEmpty;
+  /// Whether the *core* tools (ffmpeg/ffprobe) are present. This gates choosing
+  /// a book; engine-specific tools are handled per engine afterwards.
+  bool get coreToolsReady => _depsChecked && missingRequired.isEmpty;
+
+  /// Whether at least one TTS engine is actually usable right now: a local
+  /// engine is installed, or a cloud engine has an API key entered. Used so the
+  /// toolkit doesn't claim "Ready" when no engine can speak.
+  bool get anyEngineReady => TtsBackendKind.values.any((k) {
+        if (!backendAvailable(k)) return false;
+        if (k.isCloud) {
+          return (_options?.apiKeys[k.name] ?? '').trim().isNotEmpty;
+        }
+        return true;
+      });
+
+  /// Overall readiness shown as "Ready": core tools present *and* a usable
+  /// engine exists.
+  bool get environmentReady => coreToolsReady && anyEngineReady;
 
   /// Whether [backend] is installed/configured enough to be *selectable*.
   ///
@@ -217,11 +234,9 @@ class AppController extends ChangeNotifier {
       return piperInstaller.isVoiceInstalled(voiceId);
     }
     if (backend == TtsBackendKind.kokoro) {
-      final binsOk = checker
-          .requiredFor(backend)
-          .where((k) => k.binaryName != null)
-          .every((k) => statusOf(k)?.found ?? false);
-      return binsOk && (statusOf(DependencyKind.kokoroModel)?.found ?? false);
+      // Needs espeak-ng (for phonemes) and the downloaded model + voices.
+      final espeak = statusOf(DependencyKind.espeakNg)?.found ?? false;
+      return espeak && kokoroInstaller.isInstalled();
     }
     return true;
   }
@@ -259,6 +274,38 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Whether Kokoro is selected but its model/voices still need downloading.
+  bool get needsKokoroSetup {
+    final o = _options;
+    return o != null &&
+        o.backend == TtsBackendKind.kokoro &&
+        (statusOf(DependencyKind.espeakNg)?.found ?? false) &&
+        !kokoroInstaller.isInstalled();
+  }
+
+  bool _installingKokoro = false;
+
+  /// Whether a Kokoro download is in progress.
+  bool get installingKokoro => _installingKokoro;
+
+  /// Downloads the Kokoro model + voices, streaming progress, then re-checks.
+  Future<void> setupKokoro() async {
+    if (_installingKokoro) return;
+    _installingKokoro = true;
+    notifyListeners();
+    try {
+      await for (final line in kokoroInstaller.ensureInstalled()) {
+        log.info(line);
+      }
+    } on Object catch (e) {
+      log.error('Kokoro setup failed: $e');
+    } finally {
+      _installingKokoro = false;
+      await checkDeps();
+      notifyListeners();
+    }
+  }
+
   /// Whether the Piper engine can be auto-installed on this platform.
   bool get piperAutoInstallSupported => piperInstaller.autoInstallSupported;
 
@@ -266,7 +313,9 @@ class AppController extends ChangeNotifier {
   String unavailableReason(TtsBackendKind backend) => switch (backend) {
         TtsBackendKind.piper =>
           piperAutoInstallSupported ? 'needs download' : 'no macOS build',
-        TtsBackendKind.kokoro => 'coming soon',
+        TtsBackendKind.kokoro => (statusOf(DependencyKind.espeakNg)?.found ?? false)
+            ? 'needs download'
+            : 'needs espeak-ng',
         _ => 'unavailable',
       };
 
@@ -337,7 +386,8 @@ class AppController extends ChangeNotifier {
           runner: runner,
           httpClient: httpClient,
           modelsDir: modelsDir,
-          piper: piperInstaller);
+          piper: piperInstaller,
+          kokoro: kokoroInstaller);
       await conversion.run(b, o, backend: backend, ffmpeg: ffmpeg);
     } on Object catch (e) {
       log.error('Conversion could not start: $e');

@@ -42,6 +42,10 @@ class OptionsPanel extends StatelessWidget {
                   const SizedBox(height: 16),
                   _PiperSetup(controller: controller),
                 ],
+                if (controller.needsKokoroSetup) ...[
+                  const SizedBox(height: 16),
+                  _KokoroSetup(controller: controller),
+                ],
                 const SizedBox(height: 18),
                 _speedSlider(context, o),
                 if (o.backend.isCloud) ...[
@@ -224,6 +228,49 @@ class _PiperSetup extends StatelessWidget {
               installing
                   ? 'Fetching the engine and voice (~80 MB). Watch the log below.'
                   : 'Piper is free and offline. One-time ~80 MB download to enable it.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One-click Kokoro setup: downloads the ONNX model + voices on demand.
+class _KokoroSetup extends StatelessWidget {
+  final AppController controller;
+  const _KokoroSetup({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final installing = controller.installingKokoro;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTokens.amber.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTokens.amber.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          FilledButton.icon(
+            onPressed: installing ? null : controller.setupKokoro,
+            icon: installing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTokens.ink))
+                : const Icon(Icons.download_rounded, size: 18),
+            label: Text(installing ? 'Downloading…' : 'Download Kokoro model'),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              installing
+                  ? 'Fetching the model + voices (~115 MB). Watch the log below.'
+                  : 'Kokoro is free, offline, high quality. One-time ~115 MB download.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),

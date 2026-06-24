@@ -5,12 +5,12 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:audiobook_studio/data/audio/ffmpeg_service.dart';
 import 'package:audiobook_studio/data/deps/dependency_checker.dart';
+import 'package:audiobook_studio/data/deps/kokoro_installer.dart';
 import 'package:audiobook_studio/data/deps/piper_installer.dart';
 import 'package:audiobook_studio/data/epub/epub_parser.dart';
 import 'package:audiobook_studio/data/process_runner.dart';
 import 'package:audiobook_studio/domain/conversion_options.dart';
 import 'package:audiobook_studio/domain/dependency.dart';
-import 'package:audiobook_studio/domain/progress.dart';
 import 'package:audiobook_studio/logic/app_controller.dart';
 import 'package:audiobook_studio/logic/conversion_controller.dart';
 import 'package:audiobook_studio/logic/log_controller.dart';
@@ -61,27 +61,36 @@ void installPiperFiles(PiperInstaller piper, String voiceId) {
   File(piper.voiceConfigPath(voiceId)).writeAsStringSync('{}');
 }
 
-({AppController controller, PiperInstaller piper}) build(Set<String> present) {
+({AppController controller, PiperInstaller piper, KokoroInstaller kokoro})
+    build(Set<String> present) {
   final runner = ConfigurableRunner(present);
   final log = LogController();
   final client = MockClient((_) async => http.Response('', 200));
-  final piper = PiperInstaller(
-      modelsDir: p.join(_tmp.path, 'm${present.hashCode}${present.length}'),
-      client: client);
+  final mdir = p.join(_tmp.path, 'm${present.hashCode}${present.length}');
+  final piper = PiperInstaller(modelsDir: mdir, client: client);
+  final kokoro = KokoroInstaller(modelsDir: mdir, client: client);
   final controller = AppController(
     parser: EpubParser(),
     ffmpeg: FfmpegService(runner),
     runner: runner,
     httpClient: client,
-    checker: DependencyChecker(runner, piper: piper),
+    checker: DependencyChecker(runner, piper: piper, kokoro: kokoro),
     piperInstaller: piper,
+    kokoroInstaller: kokoro,
     log: log,
     conversion: ConversionController(log: log),
     os: HostOs.macos,
     modelsDir: piper.modelsDir,
     checkOnStart: false,
   );
-  return (controller: controller, piper: piper);
+  return (controller: controller, piper: piper, kokoro: kokoro);
+}
+
+/// Creates fake Kokoro model + voices files so the installer reports installed.
+void installKokoroFiles(KokoroInstaller k) {
+  Directory(k.kokoroDir).createSync(recursive: true);
+  File(k.modelPath).writeAsBytesSync(const [0]);
+  File(k.voicesPath).writeAsBytesSync(const [0]);
 }
 
 void main() {
@@ -105,11 +114,25 @@ void main() {
     expect(b.controller.options!.backend, TtsBackendKind.piper); // preferred
   });
 
-  test('environmentReady ignores optional engine tools', () async {
-    final c = build({'ffmpeg', 'ffprobe'}).controller;
+  test('core tools ready with ffmpeg/ffprobe, but not "Ready" with no engine',
+      () async {
+    final c = build({'ffmpeg', 'ffprobe'}).controller; // no engine installed
     await c.checkDeps();
-    expect(c.environmentReady, isTrue);
+    expect(c.coreToolsReady, isTrue);
     expect(c.missingRequired, isEmpty);
+    // No local engine installed and no cloud key → not overall-ready.
+    expect(c.anyEngineReady, isFalse);
+    expect(c.environmentReady, isFalse);
+  });
+
+  test('anyEngineReady becomes true once a cloud key is entered', () async {
+    final c = build({'ffmpeg', 'ffprobe'}).controller;
+    await c.loadBook(_fixture(), '/books/t.epub'); // defaults to a cloud engine
+    expect(c.anyEngineReady, isFalse);
+    c.updateOptions((o) =>
+        o.copyWith(apiKeys: {o.backend.name: 'sk-test'}));
+    expect(c.anyEngineReady, isTrue);
+    expect(c.environmentReady, isTrue);
   });
 
   test('preferredBackend favours local Piper when it is installed', () async {
@@ -142,12 +165,27 @@ void main() {
     expect(c.needsPiperSetup, isTrue);
   });
 
-  test('a failed start surfaces as an error in the progress view', () async {
-    final c = build({'ffmpeg', 'ffprobe', 'espeak-ng'}).controller;
-    await c.loadBook(_fixture(), '/books/t.epub');
-    c.updateOptions((o) => o.copyWith(backend: TtsBackendKind.kokoro));
-    await c.startConversion();
-    expect(c.progress.phase, ConvPhase.error);
-    expect(c.progress.message, contains('Could not start'));
+  test('kokoro needs espeak-ng + a model download before it is available',
+      () async {
+    final b = build({'ffmpeg', 'ffprobe', 'espeak-ng'});
+    await b.controller.loadBook(_fixture(), '/books/t.epub');
+    // espeak present but model not downloaded yet → unavailable, setup needed.
+    expect(b.controller.backendAvailable(TtsBackendKind.kokoro), isFalse);
+    b.controller.updateOptions((o) => o.copyWith(backend: TtsBackendKind.kokoro));
+    expect(b.controller.needsKokoroSetup, isTrue);
+
+    // After the model + voices are present, Kokoro is available.
+    installKokoroFiles(b.kokoro);
+    await b.controller.checkDeps();
+    expect(b.controller.backendAvailable(TtsBackendKind.kokoro), isTrue);
+    expect(b.controller.needsKokoroSetup, isFalse);
+  });
+
+  test('kokoro is unavailable without espeak-ng even if the model exists',
+      () async {
+    final b = build({'ffmpeg', 'ffprobe'}); // no espeak-ng
+    installKokoroFiles(b.kokoro);
+    await b.controller.loadBook(_fixture(), '/books/t.epub');
+    expect(b.controller.backendAvailable(TtsBackendKind.kokoro), isFalse);
   });
 }

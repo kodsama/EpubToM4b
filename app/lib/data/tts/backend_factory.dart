@@ -5,9 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import '../../domain/conversion_options.dart';
+import '../deps/kokoro_installer.dart';
 import '../deps/piper_installer.dart';
 import '../process_runner.dart';
 import 'elevenlabs_backend.dart';
+import 'kokoro_backend.dart';
+import 'kokoro_ort_session.dart';
 import 'openai_backend.dart';
 import 'piper_backend.dart';
 import 'tts_backend.dart';
@@ -26,6 +29,7 @@ TtsBackend makeBackend(
   required http.Client httpClient,
   required String modelsDir,
   PiperInstaller? piper,
+  KokoroInstaller? kokoro,
 }) {
   switch (options.backend) {
     case TtsBackendKind.piper:
@@ -52,8 +56,15 @@ TtsBackend makeBackend(
         voiceId: options.voiceId,
       );
     case TtsBackendKind.kokoro:
-      throw UnimplementedError(
-          'Kokoro backend is initialized via KokoroBackend.load(); '
-          'see data/tts/kokoro_backend.dart');
+      final k = kokoro ??
+          (throw StateError('Kokoro installer not provided to makeBackend'));
+      return KokoroBackend(
+        runner: runner,
+        session: KokoroOrtSession(
+            modelPath: k.modelPath, voicesPath: k.voicesPath),
+        languageCode: options.languageCode,
+        voiceId: options.voiceId,
+        speed: options.speed,
+      );
   }
 }

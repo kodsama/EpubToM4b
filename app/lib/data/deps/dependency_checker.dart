@@ -4,16 +4,20 @@ library;
 import '../../domain/conversion_options.dart';
 import '../../domain/dependency.dart';
 import '../process_runner.dart';
+import 'kokoro_installer.dart';
 import 'piper_installer.dart';
 
 /// Resolves which dependencies a given [TtsBackendKind] requires and whether
 /// each is present on this machine, using `which`/`where` to locate binaries
-/// and a [PiperInstaller] to detect app-managed Piper downloads.
+/// and the app-managed installers to detect downloaded models/voices.
 class DependencyChecker {
   final ProcessRunner _runner;
   final PiperInstaller? _piper;
+  final KokoroInstaller? _kokoro;
 
-  DependencyChecker(this._runner, {PiperInstaller? piper}) : _piper = piper;
+  DependencyChecker(this._runner, {PiperInstaller? piper, KokoroInstaller? kokoro})
+      : _piper = piper,
+        _kokoro = kokoro;
 
   /// The dependencies required to run [backend]. ffmpeg/ffprobe are always
   /// needed; Piper adds the piper binary + a voice; Kokoro adds espeak-ng + its
@@ -58,6 +62,16 @@ class DependencyChecker {
   /// deps (voices/models) are reported missing here and handled by the
   /// downloader UI.
   Future<DependencyStatus> _probe(DependencyKind kind, HostOs os) async {
+    // App-managed Kokoro model download.
+    if (kind == DependencyKind.kokoroModel) {
+      final has = _kokoro?.isInstalled() ?? false;
+      return DependencyStatus(
+        kind: kind,
+        found: has,
+        location: has ? 'downloaded' : null,
+        installHint: has ? null : _downloadHint(kind),
+      );
+    }
     // App-managed Piper voice download.
     if (kind == DependencyKind.piperVoice) {
       final has = _piper?.hasAnyVoice() ?? false;
@@ -105,7 +119,7 @@ class DependencyChecker {
 
   /// Honest status text for a downloadable (non-binary) dependency.
   String _downloadHint(DependencyKind kind) => switch (kind) {
-        DependencyKind.kokoroModel => 'Kokoro support is in progress',
+        DependencyKind.kokoroModel => 'Downloaded in-app (~115 MB)',
         DependencyKind.piperVoice => 'Comes with the Piper voice',
         _ => 'Fetched automatically',
       };

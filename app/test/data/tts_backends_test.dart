@@ -2,9 +2,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audiobook_studio/data/audio/wav_writer.dart';
+import 'package:audiobook_studio/data/deps/kokoro_installer.dart';
 import 'package:audiobook_studio/data/process_runner.dart';
 import 'package:audiobook_studio/data/tts/backend_factory.dart';
 import 'package:audiobook_studio/data/tts/elevenlabs_backend.dart';
+import 'package:audiobook_studio/data/tts/kokoro_backend.dart';
 import 'package:audiobook_studio/data/tts/openai_backend.dart';
 import 'package:audiobook_studio/data/tts/piper_backend.dart';
 import 'package:audiobook_studio/domain/book.dart';
@@ -140,13 +142,14 @@ void main() {
           isA<ElevenLabsBackend>());
     });
 
-    test('Kokoro throws until its runtime module initializes it', () {
+    test('Kokoro builds a KokoroBackend when an installer is provided', () {
       final runner = RecordingRunner();
       final client = MockClient((_) async => http.Response('', 200));
+      final kokoro = KokoroInstaller(modelsDir: '/m', client: client);
       expect(
-        () => makeBackend(o(TtsBackendKind.kokoro),
-            runner: runner, httpClient: client, modelsDir: '/m'),
-        throwsUnimplementedError,
+        makeBackend(o(TtsBackendKind.kokoro),
+            runner: runner, httpClient: client, modelsDir: '/m', kokoro: kokoro),
+        isA<KokoroBackend>(),
       );
     });
   });

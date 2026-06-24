@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:audiobook_studio/data/audio/ffmpeg_service.dart';
 import 'package:audiobook_studio/data/deps/dependency_checker.dart';
+import 'package:audiobook_studio/data/deps/kokoro_installer.dart';
 import 'package:audiobook_studio/data/deps/piper_installer.dart';
 import 'package:audiobook_studio/data/epub/epub_parser.dart';
 import 'package:audiobook_studio/data/process_runner.dart';
@@ -66,16 +67,17 @@ AppController makeController({bool depsFound = true}) {
   final runner = FakeRunner(found: depsFound);
   final log = LogController();
   final client = MockClient((_) async => http.Response('', 200));
-  final piper = PiperInstaller(
-      modelsDir: Directory.systemTemp.createTempSync('wtest_').path,
-      client: client);
+  final mdir = Directory.systemTemp.createTempSync('wtest_').path;
+  final piper = PiperInstaller(modelsDir: mdir, client: client);
+  final kokoro = KokoroInstaller(modelsDir: mdir, client: client);
   return AppController(
     parser: EpubParser(),
     ffmpeg: FfmpegService(runner),
     runner: runner,
     httpClient: client,
-    checker: DependencyChecker(runner, piper: piper),
+    checker: DependencyChecker(runner, piper: piper, kokoro: kokoro),
     piperInstaller: piper,
+    kokoroInstaller: kokoro,
     log: log,
     conversion: ConversionController(log: log),
     os: HostOs.macos,

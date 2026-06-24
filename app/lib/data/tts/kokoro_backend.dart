@@ -13,6 +13,7 @@ import '../../domain/conversion_options.dart';
 import '../../domain/voice.dart';
 import '../audio/wav_writer.dart';
 import '../process_runner.dart';
+import 'kokoro_vocab.g.dart';
 import 'tts_backend.dart';
 import 'voice_catalog.dart';
 
@@ -39,16 +40,8 @@ class KokoroVocab {
   final Map<String, int> _map;
   const KokoroVocab(this._map);
 
-  /// A minimal stable mapping over the characters that appear in espeak IPA
-  /// output, used until the model's real vocab is provided.
-  factory KokoroVocab.fallback() {
-    const symbols =
-        ' abcdefghijklmnopqrstuvwxyzɑɐɒæɓʙβɔɕçɗɖðʤəɘɚɛɜɝɞɟʄɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮ'
-        'ʟɱɯɰŋɳɲɴøɵɸθœɶʘɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑ.!?,;';
-    return KokoroVocab({
-      for (var i = 0; i < symbols.length; i++) symbols[i]: i + 1,
-    });
-  }
+  /// The canonical Kokoro vocab (generated from the model's `config.json`).
+  factory KokoroVocab.fallback() => const KokoroVocab(kKokoroVocab);
 
   /// Tokenizes an IPA [phonemes] string, dropping unknown symbols.
   List<int> tokenize(String phonemes) =>
@@ -99,11 +92,18 @@ class KokoroBackend extends TtsBackend {
   List<Voice> voicesFor(String languageCode) =>
       VoiceCatalog.voices(TtsBackendKind.kokoro, languageCode);
 
+  /// espeak-ng voice for a Kokoro language code (Kokoro voices are fr-fr/en-us).
+  static String espeakVoice(String languageCode) => switch (languageCode) {
+        'fr' => 'fr-fr',
+        'en' => 'en-us',
+        _ => languageCode,
+      };
+
   /// Converts [text] to IPA phonemes via espeak-ng (`-q --ipa`).
   Future<String> phonemize(String text) async {
     final r = await _runner.checked(
       espeakBin,
-      ['-q', '--ipa', '-v', languageCode],
+      ['-q', '--ipa', '-v', espeakVoice(languageCode)],
       stdinText: text,
     );
     return r.stdout.replaceAll('\n', ' ').trim();

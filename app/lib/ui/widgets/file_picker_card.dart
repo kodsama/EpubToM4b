@@ -50,10 +50,10 @@ class FilePickerCard extends StatelessWidget {
     return SectionCard(
       step: 2,
       title: 'Choose your book',
-      subtitle: controller.environmentReady
+      subtitle: controller.coreToolsReady
           ? 'A DRM-free EPUB file'
-          : 'Finish the toolkit step first',
-      dimmed: !controller.environmentReady,
+          : 'Install the required tools first',
+      dimmed: !controller.coreToolsReady,
       trailing: book == null
           ? null
           : const StatusPill('Loaded', icon: Icons.check_rounded),

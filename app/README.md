@@ -30,7 +30,7 @@ binaries (`ffmpeg`, `piper`, `espeak-ng`) and cloud TTS over HTTP.
   | **Piper** (default) | free, local | offline | standalone binary + `.onnx` voice |
   | **OpenAI** | paid | cloud | `gpt-4o-mini-tts`, very natural |
   | **ElevenLabs** | paid | cloud | `eleven_multilingual_v2`, top fidelity |
-  | **Kokoro** | free, local | offline | ONNX model (see verification note) |
+  | **Kokoro** | free, local | offline | ONNX model, auto-downloaded; verified on macOS |
 - 🌍 **Multi-language** — French and English out of the box; extend by adding a
   voice to `lib/data/tts/voice_catalog.dart`.
 - 🎚️ **All options in the UI with smart defaults** — engine, language, voice,
