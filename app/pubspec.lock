@@ -233,14 +233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  ffmpeg_kit_flutter_new:
+  ffmpeg_kit_flutter_new_audio:
     dependency: "direct main"
     description:
-      name: ffmpeg_kit_flutter_new
-      sha256: "213ca74666ce8aa01fdaa77adc40444e9ef39e140b264747787bb0555da06783"
+      name: ffmpeg_kit_flutter_new_audio
+      sha256: "0a698b46cd163c8e9917af75325c84d27871a2a8b2c37de3b40486cd0ab662ae"
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.1"
+    version: "2.0.0"
   ffmpeg_kit_flutter_platform_interface:
     dependency: transitive
     description:

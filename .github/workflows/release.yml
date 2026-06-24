@@ -90,8 +90,8 @@ jobs:
                    os.path.join(os.environ.get('LOCALAPPDATA',''),'Pub','Cache'),
                    os.path.join(os.environ.get('APPDATA',''),'Pub','Cache')]
           pkg = next((h for r in roots if r
-                      for h in glob.glob(os.path.join(r,'hosted','*','ffmpeg_kit_flutter_new-*'))), None)
-          assert pkg, f'ffmpeg_kit_flutter_new not found under {roots}'
+                      for h in glob.glob(os.path.join(r,'hosted','*','ffmpeg_kit_flutter_new_audio-*'))), None)
+          assert pkg, f'ffmpeg_kit_flutter_new_audio not found under {roots}'
           p = os.path.join(pkg, 'pubspec.yaml'); s = open(p).read()
           for plat in ('macos', 'windows'):
               s = re.sub(r'^      ' + plat + r':\n(?:        .*\n)+', '', s, flags=re.M)
