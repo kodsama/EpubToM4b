@@ -1,8 +1,9 @@
 name: Release builds
 
-# Builds the desktop app for macOS, Linux and Windows and attaches the zips to
-# the GitHub release. Triggers on a pushed tag (v*), or manually for an existing
-# tag via "Run workflow".
+# On a pushed tag (v*) — or manually for an existing tag — this creates the
+# GitHub release and builds native installers for macOS, Linux and Windows.
+# Each installer bundles BOTH the desktop app and the headless CLI (the CLI is
+# part of the app), so there's one download per platform.
 on:
   push:
     tags: ['v*']
@@ -22,8 +23,7 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      - name: Checkout (the tag)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref_name }}
       - name: Ensure the GitHub release exists
@@ -52,13 +52,11 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      - name: Checkout (the tag)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref_name }}
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.3
           channel: stable
@@ -68,29 +66,105 @@ jobs:
         if: matrix.target == 'linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config liblzma-dev
 
-      - name: Build
+      - name: Build desktop app
         working-directory: app
         run: flutter build ${{ matrix.target }} --release
 
-      - name: Package (macOS)
+      - name: Build CLI
+        working-directory: app
+        run: dart build cli
+
+      # ---- macOS: embed CLI in the .app, then make a .dmg ----
+      - name: Package macOS (.dmg)
         if: matrix.target == 'macos'
         working-directory: app
-        run: ditto -c -k --keepParent "build/macos/Build/Products/Release/audiobook_studio.app" "AudiobookStudio-macos.zip"
+        run: |
+          set -e
+          APP="build/macos/Build/Products/Release/audiobook_studio.app"
+          CLI=$(echo build/cli/*/bundle)
+          # The CLI needs the sherpa native libs the app already ships.
+          cp "$APP/Contents/Frameworks/"libsherpa-onnx-c-api.dylib "$APP/Contents/Frameworks/"libonnxruntime*.dylib "$CLI/lib/" || true
+          mkdir -p "$APP/Contents/Resources/cli"
+          cp -R "$CLI/bin" "$CLI/lib" "$APP/Contents/Resources/cli/"
+          STAGE=$(mktemp -d); cp -R "$APP" "$STAGE/"; ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "Audiobook Studio" -srcfolder "$STAGE" -ov -format UDZO AudiobookStudio-macos.dmg
 
-      - name: Package (Linux)
+      # ---- Linux: embed CLI in the bundle, then build a .deb ----
+      - name: Package Linux (.deb)
         if: matrix.target == 'linux'
         working-directory: app
-        run: (cd build/linux/x64/release/bundle && zip -r "$GITHUB_WORKSPACE/app/AudiobookStudio-linux.zip" .)
+        run: |
+          set -e
+          VER="${TAG#v}"
+          BUNDLE="build/linux/x64/release/bundle"
+          CLI=$(echo build/cli/*/bundle)
+          cp "$BUNDLE/lib/"libsherpa-onnx-c-api.so "$BUNDLE/lib/"libonnxruntime*.so "$CLI/lib/" 2>/dev/null || true
+          mkdir -p "$BUNDLE/cli"; cp -R "$CLI/bin" "$CLI/lib" "$BUNDLE/cli/"
+          ROOT=$(mktemp -d)
+          install -d "$ROOT/opt/audiobook_studio" "$ROOT/usr/bin" "$ROOT/usr/share/applications" "$ROOT/DEBIAN"
+          cp -R "$BUNDLE/." "$ROOT/opt/audiobook_studio/"
+          ln -s /opt/audiobook_studio/audiobook_studio "$ROOT/usr/bin/audiobook_studio"
+          ln -s /opt/audiobook_studio/cli/bin/audiobook_studio "$ROOT/usr/bin/audiobook_studio-cli"
+          cat > "$ROOT/usr/share/applications/audiobook_studio.desktop" <<EOF
+          [Desktop Entry]
+          Name=Audiobook Studio
+          Exec=/opt/audiobook_studio/audiobook_studio
+          Icon=audiobook_studio
+          Type=Application
+          Categories=AudioVideo;Audio;
+          EOF
+          cat > "$ROOT/DEBIAN/control" <<EOF
+          Package: audiobook-studio
+          Version: ${VER}
+          Section: sound
+          Priority: optional
+          Architecture: amd64
+          Depends: libgtk-3-0, libstdc++6
+          Maintainer: kodsama <noreply@users.noreply.github.com>
+          Description: Convert EPUB books into chaptered M4B audiobooks (app + CLI).
+          EOF
+          dpkg-deb --build --root-owner-group "$ROOT" AudiobookStudio-linux.deb
 
-      - name: Package (Windows)
+      # ---- Windows: embed CLI, then build an Inno Setup installer ----
+      - name: Package Windows (.exe)
         if: matrix.target == 'windows'
         working-directory: app
         shell: pwsh
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath AudiobookStudio-windows.zip
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $rel = "build/windows/x64/runner/Release"
+          $cli = (Get-ChildItem build/cli/*/bundle -Directory)[0].FullName
+          Copy-Item "$rel/sherpa-onnx-c-api.dll","$rel/onnxruntime.dll" "$cli/lib/" -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force "$rel/cli" | Out-Null
+          Copy-Item "$cli/bin","$cli/lib" "$rel/cli/" -Recurse
+          $ver = "${env:TAG}".TrimStart('v')
+          @"
+          [Setup]
+          AppName=Audiobook Studio
+          AppVersion=$ver
+          DefaultDirName={autopf}\Audiobook Studio
+          DefaultGroupName=Audiobook Studio
+          OutputBaseFilename=AudiobookStudio-windows-setup
+          OutputDir=.
+          Compression=lzma2
+          SolidCompression=yes
+          ArchitecturesAllowed=x64compatible
+          [Files]
+          Source: "$rel\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+          [Icons]
+          Name: "{group}\Audiobook Studio"; Filename: "{app}\audiobook_studio.exe"
+          Name: "{commondesktop}\Audiobook Studio"; Filename: "{app}\audiobook_studio.exe"
+          "@ | Out-File -Encoding ascii installer.iss
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
       - name: Upload to release
         working-directory: app
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" AudiobookStudio-*.zip --clobber --repo "${{ github.repository }}"
+        run: |
+          shopt -s nullglob
+          files=(AudiobookStudio-*.dmg AudiobookStudio-*.deb AudiobookStudio-*setup.exe)
+          echo "Uploading: ${files[*]}"
+          gh release upload "$TAG" "${files[@]}" --clobber --repo "${{ github.repository }}"
