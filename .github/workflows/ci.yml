@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test (Flutter)
+    # macOS matches the verified platform; sherpa-onnx's native-asset build hook
+    # resolves the prebuilt libraries here.
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.4
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test (unit + widget)
+        # Default `flutter test` runs test/ only; integration_test/ needs a
+        # device + downloaded models and is excluded here.
+        run: flutter test
