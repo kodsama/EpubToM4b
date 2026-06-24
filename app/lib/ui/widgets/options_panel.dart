@@ -58,13 +58,38 @@ class OptionsPanel extends StatelessWidget {
         DropdownButtonFormField<TtsBackendKind>(
           isExpanded: true,
           initialValue: o.backend,
+          selectedItemBuilder: (context) => [
+            for (final k in TtsBackendKind.values) Text(k.label),
+          ],
           items: [
             for (final k in TtsBackendKind.values)
-              DropdownMenuItem(value: k, child: Text(k.label)),
+              DropdownMenuItem(
+                value: k,
+                enabled: controller.backendAvailable(k),
+                child: _engineItem(k),
+              ),
           ],
-          onChanged: (k) => k == null ? null : controller.setBackend(k),
+          onChanged: (k) =>
+              (k == null || !controller.backendAvailable(k))
+                  ? null
+                  : controller.setBackend(k),
         ),
       );
+
+  /// Dropdown row for an engine: greyed with a reason when not selectable.
+  Widget _engineItem(TtsBackendKind k) {
+    final available = controller.backendAvailable(k);
+    if (available) return Text(k.label);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(k.label, style: const TextStyle(color: AppTokens.muted)),
+        ),
+        Text('· ${controller.unavailableReason(k)}',
+            style: const TextStyle(color: AppTokens.muted, fontSize: 12)),
+      ],
+    );
+  }
 
   Widget _languageField(ConversionOptions o) {
     final langs = VoiceCatalog.languages(o.backend);

@@ -25,6 +25,10 @@ class ProgressView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (progress.phase == ConvPhase.error) ...[
+            _ErrorBanner(message: progress.message ?? 'Conversion failed'),
+            const SizedBox(height: 14),
+          ],
           Row(
             children: [
               Expanded(child: _Bar(value: progress.globalFraction, height: 12)),
@@ -63,6 +67,37 @@ class ProgressView extends StatelessWidget {
           const StatusPill('Narrating', color: AppTokens.amber, icon: Icons.graphic_eq_rounded),
         _ => const StatusPill('Idle', color: AppTokens.muted),
       };
+}
+
+/// A red banner shown at the top of the progress view when a run fails.
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTokens.rust.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTokens.rust.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              size: 18, color: AppTokens.rust),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(message,
+                style: const TextStyle(color: AppTokens.rust, height: 1.4)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ChapterRow extends StatelessWidget {

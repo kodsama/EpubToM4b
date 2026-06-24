@@ -43,6 +43,12 @@ class ConversionController extends ChangeNotifier {
     _log.warn('Cancellation requested');
   }
 
+  /// Puts the progress view into an error state with [message], for failures
+  /// that happen before/around a run (e.g. the backend can't be constructed).
+  void markError(String message) {
+    _setPhase(ConvPhase.error, message: message);
+  }
+
   /// Runs the conversion for [book] with [options], using [backend] for speech
   /// and [ffmpeg] for assembly. Emits progress throughout; returns when the
   /// `.m4b` is written, the run is cancelled, or assembly is skipped because

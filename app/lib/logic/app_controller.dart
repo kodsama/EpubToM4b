@@ -192,20 +192,42 @@ class AppController extends ChangeNotifier {
   /// block choosing a book — they only gate that specific engine.
   bool get environmentReady => _depsChecked && missingRequired.isEmpty;
 
-  /// Whether the *currently selected* engine can actually run: its probeable
-  /// binaries are all present (and, for cloud engines, an API key is set).
+  /// Whether [backend] is installed/configured enough to be *selectable*.
+  ///
+  /// Cloud engines are always selectable (you configure them by entering an API
+  /// key after selecting). Local engines require their tools to be present:
+  /// Piper needs the piper binary; Kokoro needs espeak-ng and its model. This
+  /// excludes the API-key check, which gates conversion (not selection).
+  bool backendAvailable(TtsBackendKind backend) {
+    if (!_depsChecked) return backend.isCloud;
+    if (backend.isCloud) return true;
+    final binsOk = checker
+        .requiredFor(backend)
+        .where((k) => k.binaryName != null)
+        .every((k) => statusOf(k)?.found ?? false);
+    if (backend == TtsBackendKind.kokoro) {
+      return binsOk && (statusOf(DependencyKind.kokoroModel)?.found ?? false);
+    }
+    return binsOk;
+  }
+
+  /// A short reason an unavailable [backend] can't be selected, for the UI.
+  String unavailableReason(TtsBackendKind backend) => switch (backend) {
+        TtsBackendKind.piper => 'install piper',
+        TtsBackendKind.kokoro => 'needs Kokoro model',
+        _ => 'unavailable',
+      };
+
+  /// Whether the *currently selected* engine can actually run: it is available
+  /// and, for cloud engines, an API key is set.
   bool get selectedBackendReady {
     final o = _options;
     if (o == null) return false;
-    final binsOk = checker
-        .requiredFor(o.backend)
-        .where((k) => k.binaryName != null)
-        .every((k) => statusOf(k)?.found ?? false);
+    if (!backendAvailable(o.backend)) return false;
     if (o.backend.isCloud) {
-      final key = o.apiKeys[o.backend.name] ?? '';
-      return binsOk && key.trim().isNotEmpty;
+      return (o.apiKeys[o.backend.name] ?? '').trim().isNotEmpty;
     }
-    return binsOk;
+    return true;
   }
 
   /// Installs missing system packages, streaming log lines, then re-checks.
@@ -247,6 +269,7 @@ class AppController extends ChangeNotifier {
       await conversion.run(b, o, backend: backend, ffmpeg: ffmpeg);
     } on Object catch (e) {
       log.error('Conversion could not start: $e');
+      conversion.markError('Could not start: $e');
     }
   }
 
