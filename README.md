@@ -1,5 +1,15 @@
 # EPUB → M4B audiobook (French, high fidelity)
 
+> There are two ways to use this project:
+> - **`epub_to_m4b.py`** — the original single-file Python CLI (documented below).
+> - **`app/`** — **Audiobook Studio**, a cross-platform Flutter desktop app + a
+>   headless Dart CLI (terminal/agent friendly) with offline local TTS
+>   (sherpa-onnx) and cloud engines. See [`app/README.md`](app/README.md) and,
+>   for automation, [`AGENTS.md`](AGENTS.md).
+>
+> License: **GPL-3.0** ([`LICENSE`](LICENSE), third-party notes in
+> [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md)).
+
 `epub_to_m4b.py` turns a DRM-free `.epub` into a chaptered `.m4b` audiobook:
 chapters, title/author tags, and cover art are all embedded so it shows up
 properly in Apple Books, VLC, Bookplayer, Smart AudioBook Player, etc.

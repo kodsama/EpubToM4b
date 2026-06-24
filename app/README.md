@@ -134,6 +134,20 @@ build/cli/macos_arm64/bundle/bin/audiobook_studio convert book.epub --json
 The local engine loads sherpa-onnx's native library from a `flutter build macos`
 output (auto-detected), or pass `--sherpa-lib <dir>` to point at it explicitly.
 
+### For agents
+
+`audiobook_studio schema` prints a JSON description of every command, option,
+model, output event and exit code — an agent can learn the whole interface in
+one call. See [`../AGENTS.md`](../AGENTS.md) for the recommended flow and the
+`--json` event contract.
+
+## License
+
+GPL-3.0 (see [`../LICENSE`](../LICENSE)). All bundled dependencies are
+GPL-compatible; runtime-downloaded model weights carry their own licenses (note:
+MMS voices are CC-BY-NC / non-commercial). See
+[`../THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md).
+
 ## Development
 
 ```bash
