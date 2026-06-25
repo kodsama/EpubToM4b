@@ -89,10 +89,15 @@ class SystemProcessRunner extends ProcessRunner {
       await process.stdin.flush();
     }
     await process.stdin.close();
-    final out = await process.stdout.transform(utf8.decoder).join();
-    final err = await process.stderr.transform(utf8.decoder).join();
+    // Drain stdout and stderr CONCURRENTLY. Awaiting one stream to completion
+    // before reading the other deadlocks: a chatty process (ffmpeg writes
+    // encode stats to stderr) fills the unread pipe's ~64KB buffer, blocks on
+    // write, and never exits — so the first join() never returns.
+    final outF = process.stdout.transform(utf8.decoder).join();
+    final errF = process.stderr.transform(utf8.decoder).join();
+    final streams = await Future.wait([outF, errF]);
     final code = await process.exitCode;
-    return ProcessRunResult(code, out, err);
+    return ProcessRunResult(code, streams[0], streams[1]);
   }
 
   @override

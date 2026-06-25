@@ -64,5 +64,17 @@ void main() {
       final r = await SystemProcessRunner().run('cat', const [], stdinText: 'piped');
       expect(r.stdout, 'piped');
     }, skip: Platform.isWindows);
+
+    test('does not deadlock when the process floods stderr (>64KB)', () async {
+      // ~135KB written to stderr. With sequential stdout-then-stderr draining
+      // this deadlocks: the stderr pipe buffer (~64KB) fills, the process
+      // blocks on write and never exits, so stdout.join() never completes.
+      // The .timeout turns that hang into a fast, clear test failure.
+      final r = await SystemProcessRunner()
+          .run('sh', ['-c', 'yes ABCDEFGHIJKLMNOPQRSTUVWXYZ | head -n 5000 1>&2'])
+          .timeout(const Duration(seconds: 20));
+      expect(r.exitCode, 0);
+      expect(r.stderr.length, greaterThan(70000));
+    }, skip: Platform.isWindows);
   });
 }
