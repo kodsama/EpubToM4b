@@ -54,7 +54,7 @@ class _LogConsoleState extends State<LogConsole> {
       children: [
         Row(
           children: [
-            const Icon(Icons.terminal_rounded, size: 16, color: AppTokens.muted),
+            Icon(Icons.terminal_rounded, size: 16, color: AppTokens.muted),
             const SizedBox(width: 8),
             Text('Logs', style: Theme.of(context).textTheme.titleMedium),
             const Spacer(),
@@ -63,7 +63,7 @@ class _LogConsoleState extends State<LogConsole> {
               iconSize: 18,
               onPressed: () =>
                   Clipboard.setData(ClipboardData(text: widget.log.dump())),
-              icon: const Icon(Icons.copy_rounded, color: AppTokens.muted),
+              icon: Icon(Icons.copy_rounded, color: AppTokens.muted),
             ),
           ],
         ),
@@ -78,7 +78,7 @@ class _LogConsoleState extends State<LogConsole> {
             border: Border.all(color: AppTokens.line),
           ),
           child: _lines.isEmpty
-              ? const Text('No activity yet.',
+              ? Text('No activity yet.',
                   style: TextStyle(color: AppTokens.muted, fontFamily: 'monospace'))
               : ListView.builder(
                   controller: _scroll,

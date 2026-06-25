@@ -320,6 +320,18 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Installed local models (their voices are downloaded), for the manage UI.
+  List<SherpaModel> get installedModels =>
+      kSherpaModels.where(sherpaInstaller.isInstalled).toList();
+
+  /// Deletes a downloaded [model] from disk and refreshes availability.
+  Future<void> uninstallModel(SherpaModel model) async {
+    sherpaInstaller.uninstall(model);
+    log.info('Removed ${model.label}');
+    await checkDeps();
+    notifyListeners();
+  }
+
   /// A short reason an unavailable [backend] can't run, for the UI.
   String unavailableReason(TtsBackendKind backend) =>
       backend == TtsBackendKind.local ? 'download a model' : 'unavailable';

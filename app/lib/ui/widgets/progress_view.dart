@@ -86,12 +86,12 @@ class ProgressView extends StatelessWidget {
         ConvPhase.done =>
           const StatusPill('Done', icon: Icons.celebration_rounded),
         ConvPhase.error =>
-          const StatusPill('Error', color: AppTokens.rust, icon: Icons.error_outline),
+          StatusPill('Error', color: AppTokens.rust, icon: Icons.error_outline),
         ConvPhase.assembling =>
-          const StatusPill('Assembling', color: AppTokens.amber, icon: Icons.library_music_outlined),
+          StatusPill('Assembling', color: AppTokens.amber, icon: Icons.library_music_outlined),
         ConvPhase.synthesizing =>
-          const StatusPill('Narrating', color: AppTokens.amber, icon: Icons.graphic_eq_rounded),
-        _ => const StatusPill('Idle', color: AppTokens.muted),
+          StatusPill('Narrating', color: AppTokens.amber, icon: Icons.graphic_eq_rounded),
+        _ => StatusPill('Idle', color: AppTokens.muted),
       };
 }
 
@@ -113,12 +113,12 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded,
+          Icon(Icons.error_outline_rounded,
               size: 18, color: AppTokens.rust),
           const SizedBox(width: 10),
           Expanded(
             child: Text(message,
-                style: const TextStyle(color: AppTokens.rust, height: 1.4)),
+                style: TextStyle(color: AppTokens.rust, height: 1.4)),
           ),
         ],
       ),
@@ -154,19 +154,19 @@ class _ChapterRow extends StatelessWidget {
 
   Widget _statusIcon(ChapterStatus s) => switch (s) {
         ChapterStatus.done =>
-          const Icon(Icons.check_circle_rounded, size: 16, color: AppTokens.sage),
+          Icon(Icons.check_circle_rounded, size: 16, color: AppTokens.sage),
         ChapterStatus.error =>
-          const Icon(Icons.error_rounded, size: 16, color: AppTokens.rust),
-        ChapterStatus.synthesizing => const SizedBox(
+          Icon(Icons.error_rounded, size: 16, color: AppTokens.rust),
+        ChapterStatus.synthesizing => SizedBox(
             width: 16,
             height: 16,
             child: CircularProgressIndicator(strokeWidth: 2, color: AppTokens.amber)),
         ChapterStatus.assembling =>
-          const Icon(Icons.merge_rounded, size: 16, color: AppTokens.amber),
+          Icon(Icons.merge_rounded, size: 16, color: AppTokens.amber),
         ChapterStatus.skipped =>
-          const Icon(Icons.remove_circle_outline, size: 16, color: AppTokens.muted),
+          Icon(Icons.remove_circle_outline, size: 16, color: AppTokens.muted),
         ChapterStatus.pending =>
-          const Icon(Icons.circle_outlined, size: 16, color: AppTokens.muted),
+          Icon(Icons.circle_outlined, size: 16, color: AppTokens.muted),
       };
 }
 
@@ -184,7 +184,7 @@ class _Bar extends StatelessWidget {
         value: value,
         minHeight: height,
         backgroundColor: AppTokens.surfaceHigh,
-        valueColor: const AlwaysStoppedAnimation(AppTokens.amber),
+        valueColor: AlwaysStoppedAnimation(AppTokens.amber),
       ),
     );
   }

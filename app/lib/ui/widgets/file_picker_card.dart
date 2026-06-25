@@ -84,7 +84,7 @@ class FilePickerCard extends StatelessWidget {
           if (controller.parseError != null) ...[
             const SizedBox(height: 14),
             Text(controller.parseError!,
-                style: const TextStyle(color: AppTokens.rust)),
+                style: TextStyle(color: AppTokens.rust)),
           ],
           if (book != null) ...[
             const SizedBox(height: 18),
@@ -120,7 +120,7 @@ class _Metadata extends StatelessWidget {
                   width: 84,
                   height: 120,
                   color: AppTokens.surfaceHigh,
-                  child: const Icon(Icons.image_not_supported_outlined,
+                  child: Icon(Icons.image_not_supported_outlined,
                       color: AppTokens.muted),
                 ),
         ),
@@ -178,7 +178,7 @@ class _SelectionSummary extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.playlist_add_check_rounded,
+          Icon(Icons.playlist_add_check_rounded,
               size: 18, color: AppTokens.amberBright),
           const SizedBox(width: 10),
           Expanded(

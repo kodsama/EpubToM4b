@@ -53,6 +53,20 @@ class SherpaModelInstaller {
   bool isInstalled(SherpaModel model) =>
       model.voices.every(isVoiceInstalled);
 
+  /// Deletes every voice directory of [model] from disk. Best-effort.
+  void uninstall(SherpaModel model) {
+    for (final voice in model.voices) {
+      final dir = Directory(dirOf(voice));
+      if (dir.existsSync()) {
+        try {
+          dir.deleteSync(recursive: true);
+        } on FileSystemException {
+          // Non-fatal: a locked/partial dir just stays.
+        }
+      }
+    }
+  }
+
   /// Downloads + extracts every missing voice of [model], streaming log lines.
   /// [onProgress] reports overall completion (0–1) across all of the model's
   /// voices as bytes arrive.

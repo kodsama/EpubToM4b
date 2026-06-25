@@ -41,7 +41,7 @@ class OptionsPanel extends StatelessWidget {
       onToggle: onToggle,
       done: done,
       child: o == null
-          ? const Text('Load a book first.',
+          ? Text('Load a book first.',
               style: TextStyle(color: AppTokens.muted))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +185,7 @@ class _ModelSetup extends StatelessWidget {
           FilledButton.icon(
             onPressed: installing ? null : controller.setupModel,
             icon: installing
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(

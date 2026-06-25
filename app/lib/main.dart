@@ -16,13 +16,17 @@ import 'data/process_runner.dart';
 import 'logic/app_controller.dart';
 import 'logic/conversion_controller.dart';
 import 'logic/log_controller.dart';
+import 'logic/theme_controller.dart';
 import 'ui/home_screen.dart';
+import 'ui/licenses.dart';
 import 'ui/theme.dart';
 import 'util/platform_env.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerProjectLicenses();
   final support = await getApplicationSupportDirectory();
+  final theme = await ThemeController.load(support.path);
   // On mobile, output goes to app-scoped storage and scratch to the temp dir.
   final outputDir =
       isMobilePlatform ? (await getApplicationDocumentsDirectory()).path : null;
@@ -34,7 +38,7 @@ Future<void> main() async {
     outputDir: outputDir,
     workBaseDir: workBaseDir,
   );
-  runApp(AudiobookStudioApp(controller: controller));
+  runApp(AudiobookStudioApp(controller: controller, theme: theme));
 }
 
 /// Constructs an [AppController] with production collaborators. Exposed so the
@@ -68,18 +72,29 @@ AppController buildAppController({
   );
 }
 
-/// The root widget.
+/// The root widget. Rebuilds the [MaterialApp] when the [theme] choice changes,
+/// applying the matching palette ([AppTokens.brightness] drives the custom
+/// widget colors, so it must be set before the tree builds).
 class AudiobookStudioApp extends StatelessWidget {
   final AppController controller;
-  const AudiobookStudioApp({super.key, required this.controller});
+  final ThemeController theme;
+  const AudiobookStudioApp(
+      {super.key, required this.controller, required this.theme});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Audiobook Studio',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      home: HomeScreen(controller: controller),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: theme,
+      builder: (context, mode, _) {
+        final brightness =
+            mode == ThemeMode.light ? Brightness.light : Brightness.dark;
+        return MaterialApp(
+          title: 'Audiobook Studio',
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(brightness),
+          home: HomeScreen(controller: controller, theme: theme),
+        );
+      },
     );
   }
 }

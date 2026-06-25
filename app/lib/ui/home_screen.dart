@@ -7,8 +7,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/tts/sherpa_catalog.dart';
 import '../logic/app_controller.dart';
+import '../logic/theme_controller.dart';
 import '../util/platform_env.dart';
+import 'licenses.dart';
 import 'theme.dart';
 import 'widgets/convert_bar.dart';
 import 'widgets/dependency_card.dart';
@@ -21,7 +24,8 @@ import 'widgets/progress_view.dart';
 /// time, auto-advancing as the workflow progresses) and a bottom-right log FAB.
 class HomeScreen extends StatefulWidget {
   final AppController controller;
-  const HomeScreen({super.key, required this.controller});
+  final ThemeController theme;
+  const HomeScreen({super.key, required this.controller, required this.theme});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -133,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(28, 36, 28, 96),
                       children: [
-                        const _Header(),
+                        _Header(controller: _c, theme: widget.theme),
                         const SizedBox(height: 24),
                         step(
                           1,
@@ -241,7 +245,7 @@ class _LogFab extends StatelessWidget {
               child: Text(
                 unread > 99 ? '99+' : '$unread',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTokens.cream,
                     fontSize: 11,
                     fontWeight: FontWeight.w700),
@@ -282,9 +286,11 @@ class _LogPanel extends StatelessWidget {
   }
 }
 
-/// The wordmark header with a subtle amber glow.
+/// The wordmark header with a subtle amber glow and the app menu (top-right).
 class _Header extends StatelessWidget {
-  const _Header();
+  final AppController controller;
+  final ThemeController theme;
+  const _Header({required this.controller, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -308,15 +314,140 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Audiobook Studio', style: text.displaySmall),
-            Text('Turn any EPUB into a chaptered audiobook',
-                style: text.bodySmall),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Audiobook Studio', style: text.displaySmall),
+              Text('Turn any EPUB into a chaptered audiobook',
+                  style: text.bodySmall),
+            ],
+          ),
+        ),
+        _AppMenu(controller: controller, theme: theme),
+      ],
+    );
+  }
+}
+
+/// Top-right overflow menu: theme toggle, voice management, and licenses.
+class _AppMenu extends StatelessWidget {
+  final AppController controller;
+  final ThemeController theme;
+  const _AppMenu({required this.controller, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Menu',
+      icon: const Icon(Icons.menu_rounded),
+      position: PopupMenuPosition.under,
+      onSelected: (v) {
+        switch (v) {
+          case 'theme':
+            theme.toggle();
+          case 'voices':
+            _showManageVoices(context, controller);
+          case 'licenses':
+            showAppLicenses(context);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'theme',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+                theme.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+            title: Text(theme.isDark ? 'Light mode' : 'Dark mode'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'voices',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.record_voice_over_rounded),
+            title: Text('Manage voices…'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'licenses',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.gavel_rounded),
+            title: Text('Licenses'),
+          ),
         ),
       ],
     );
   }
+}
+
+/// Dialog listing installed local voices with a one-tap remove (uninstall).
+void _showManageVoices(BuildContext context, AppController controller) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Installed voices'),
+      content: SizedBox(
+        width: 420,
+        child: ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) {
+            final installed = controller.installedModels;
+            if (installed.isEmpty) {
+              return const Text(
+                  'No offline voices installed. Install one from the toolkit step.');
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final m in installed)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(m.label),
+                    subtitle: Text(
+                        '${m.languages.map((l) => l.toUpperCase()).join('/')} · ~${m.sizeMb} MB'),
+                    trailing: IconButton(
+                      tooltip: 'Remove',
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      onPressed: () => _confirmRemove(context, controller, m),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _confirmRemove(
+    BuildContext context, AppController controller, SherpaModel model) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Remove ${model.label}?'),
+      content: Text('Deletes ~${model.sizeMb} MB. You can re-download it later.'),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove')),
+      ],
+    ),
+  );
+  if (ok == true) await controller.uninstallModel(model);
 }

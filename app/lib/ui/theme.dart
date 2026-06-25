@@ -8,37 +8,54 @@ library;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Centralized design tokens so every widget pulls from one palette.
+/// Centralized design tokens so every widget pulls from one palette. The colors
+/// resolve against [brightness] so the same widgets render in the dark
+/// ("lamplit library") or a light ("sunlit paper") variant. Set [brightness]
+/// before building the theme/widget tree (the root does this on theme change).
 abstract class AppTokens {
+  /// Current palette brightness; the getters below switch on it.
+  static Brightness brightness = Brightness.dark;
+  static bool get _dark => brightness == Brightness.dark;
+
   /// Deepest background (page).
-  static const Color ink = Color(0xFF17130F);
+  static Color get ink =>
+      _dark ? const Color(0xFF17130F) : const Color(0xFFF6EFE3);
 
   /// Raised surface (cards).
-  static const Color surface = Color(0xFF211B15);
+  static Color get surface =>
+      _dark ? const Color(0xFF211B15) : const Color(0xFFFFFDF8);
 
   /// Higher surface (inputs, hover).
-  static const Color surfaceHigh = Color(0xFF2C241C);
+  static Color get surfaceHigh =>
+      _dark ? const Color(0xFF2C241C) : const Color(0xFFEFE6D5);
 
   /// Hairline borders.
-  static const Color line = Color(0xFF3A3026);
+  static Color get line =>
+      _dark ? const Color(0xFF3A3026) : const Color(0xFFDCD0BC);
 
   /// Primary glowing amber accent.
-  static const Color amber = Color(0xFFE0A458);
+  static Color get amber =>
+      _dark ? const Color(0xFFE0A458) : const Color(0xFFB1722A);
 
   /// Brighter amber for highlights/gradient tops.
-  static const Color amberBright = Color(0xFFF2C078);
+  static Color get amberBright =>
+      _dark ? const Color(0xFFF2C078) : const Color(0xFFC98F3F);
 
-  /// Primary cream text.
-  static const Color cream = Color(0xFFF3E9DC);
+  /// Primary text.
+  static Color get cream =>
+      _dark ? const Color(0xFFF3E9DC) : const Color(0xFF2A211A);
 
   /// Muted secondary text.
-  static const Color muted = Color(0xFF9C8E7C);
+  static Color get muted =>
+      _dark ? const Color(0xFF9C8E7C) : const Color(0xFF796D5C);
 
   /// Success / done.
-  static const Color sage = Color(0xFF8FB996);
+  static Color get sage =>
+      _dark ? const Color(0xFF8FB996) : const Color(0xFF4E7A57);
 
   /// Error.
-  static const Color rust = Color(0xFFD08770);
+  static Color get rust =>
+      _dark ? const Color(0xFFD08770) : const Color(0xFFB35539);
 
   /// Standard corner radius.
   static const double radius = 16;
@@ -47,10 +64,14 @@ abstract class AppTokens {
   static const double pad = 20;
 }
 
-/// Builds the [ThemeData] for the app.
-ThemeData buildAppTheme() {
-  final base = ThemeData.dark(useMaterial3: true);
-  final scheme = const ColorScheme.dark(
+/// Builds the [ThemeData] for the app in the given [brightness].
+ThemeData buildAppTheme([Brightness brightness = Brightness.dark]) {
+  AppTokens.brightness = brightness;
+  final base = ThemeData(brightness: brightness, useMaterial3: true);
+  final scheme = ColorScheme.fromSeed(
+    seedColor: AppTokens.amber,
+    brightness: brightness,
+  ).copyWith(
     primary: AppTokens.amber,
     onPrimary: AppTokens.ink,
     secondary: AppTokens.amberBright,
@@ -84,7 +105,7 @@ ThemeData buildAppTheme() {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTokens.radius),
-        side: const BorderSide(color: AppTokens.line),
+        side: BorderSide(color: AppTokens.line),
       ),
     ),
     dividerColor: AppTokens.line,
@@ -104,15 +125,15 @@ ThemeData buildAppTheme() {
       fillColor: AppTokens.surfaceHigh,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTokens.line),
+        borderSide: BorderSide(color: AppTokens.line),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTokens.line),
+        borderSide: BorderSide(color: AppTokens.line),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTokens.amber, width: 1.5),
+        borderSide: BorderSide(color: AppTokens.amber, width: 1.5),
       ),
     ),
   );

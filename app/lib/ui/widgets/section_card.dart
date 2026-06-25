@@ -76,7 +76,7 @@ class SectionCard extends StatelessWidget {
             child: AnimatedRotation(
               turns: expanded ? 0.25 : 0,
               duration: const Duration(milliseconds: 150),
-              child: const Icon(Icons.chevron_right_rounded,
+              child: Icon(Icons.chevron_right_rounded,
                   color: AppTokens.muted),
             ),
           ),
@@ -138,10 +138,10 @@ class _StepChip extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 16, color: AppTokens.sage)
+          ? Icon(Icons.check_rounded, size: 16, color: AppTokens.sage)
           : Text(
               '$step',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTokens.amberBright,
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
@@ -156,8 +156,8 @@ class StatusPill extends StatelessWidget {
   /// Pill text.
   final String label;
 
-  /// Accent color.
-  final Color color;
+  /// Accent color (defaults to the success/sage tone when null).
+  final Color? color;
 
   /// Optional leading icon.
   final IconData? icon;
@@ -165,30 +165,31 @@ class StatusPill extends StatelessWidget {
   const StatusPill(
     this.label, {
     super.key,
-    this.color = AppTokens.sage,
+    this.color,
     this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? AppTokens.sage;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: c.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: c.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: color),
+            Icon(icon, size: 14, color: c),
             const SizedBox(width: 6),
           ],
           Text(
             label,
             style: TextStyle(
-              color: color,
+              color: c,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),

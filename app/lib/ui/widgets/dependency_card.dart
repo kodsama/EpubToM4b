@@ -49,19 +49,19 @@ class DependencyCard extends StatelessWidget {
                   color: AppTokens.rust, icon: Icons.error_outline_rounded)
               : engineReady
                   ? const StatusPill('Ready', icon: Icons.check_rounded)
-                  : const StatusPill('No TTS engine yet',
+                  : StatusPill('No TTS engine yet',
                       color: AppTokens.amber, icon: Icons.mic_off_rounded),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!controller.depsChecked)
-            const Row(children: [
+            Row(children: [
               SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: AppTokens.amber)),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text('Checking your system…',
                   style: TextStyle(color: AppTokens.muted)),
             ])
@@ -73,7 +73,7 @@ class DependencyCard extends StatelessWidget {
               children: [
                 Text('Local voices', style: text.titleMedium),
                 const SizedBox(width: 8),
-                const StatusPill('only one needed', color: AppTokens.muted),
+                StatusPill('only one needed', color: AppTokens.muted),
               ],
             ),
             const SizedBox(height: 8),
@@ -102,7 +102,7 @@ class DependencyCard extends StatelessWidget {
                   onPressed:
                       controller.installing ? null : controller.installMissing,
                   icon: controller.installing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
@@ -173,7 +173,7 @@ class _ModelRow extends StatelessWidget {
                     ],
                     if (model.recommended) ...[
                       const SizedBox(width: 4),
-                      const StatusPill('Recommended',
+                      StatusPill('Recommended',
                           color: AppTokens.amber, icon: Icons.star_rounded),
                     ],
                     const SizedBox(width: 6),
@@ -208,7 +208,7 @@ class _ModelRow extends StatelessWidget {
                       minHeight: 6,
                       backgroundColor: AppTokens.surfaceHigh,
                       valueColor:
-                          const AlwaysStoppedAnimation(AppTokens.amber),
+                          AlwaysStoppedAnimation(AppTokens.amber),
                     ),
                   ),
                 ],
@@ -241,7 +241,7 @@ class _LangTag extends StatelessWidget {
         border: Border.all(color: AppTokens.line),
       ),
       child: Text(code.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
               color: AppTokens.muted,
               fontSize: 10,
               fontWeight: FontWeight.w700)),
